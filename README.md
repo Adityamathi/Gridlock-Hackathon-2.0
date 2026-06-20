@@ -21,9 +21,24 @@ A decision-support dashboard that predicts severity, road closures, event durati
 
 ## Quick Start
 
+### Step 1 — Get the code
+
+**Option A: Clone via Git**
 ```bash
 git clone https://github.com/Adityamathi/Gridlock-Hackathon-2.0.git
 cd Gridlock-Hackathon-2.0
+```
+
+**Option B: Download ZIP**
+1. Go to https://github.com/Adityamathi/Gridlock-Hackathon-2.0
+2. Click **Code** → **Download ZIP**
+3. Extract the ZIP and open a terminal inside the extracted folder
+
+### Step 2 — Install & Run
+
+Open a terminal in the project folder and run:
+
+```bash
 pip install -r requirements.txt
 python server.py
 ```
