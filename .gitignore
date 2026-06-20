@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pkl
+*.joblib
+outputs/models/
+outputs/event_feedback_log.csv
+outputs/retraining_dataset.csv
+app/.streamlit/secrets.toml
+*.log
+.DS_Store

@@ -1,0 +1,37 @@
+============================================================
+MODEL TRAINING METRICS
+============================================================
+
+[priority] NOT MODELED — priority is a deterministic rule: every named corridor = High, 'Non-corridor' = Low (confirmed 100% pure mapping across all 22 corridors in training data). Handled in infer_event_profile.assign_priority_rule().
+
+[closure_model]   Accuracy=0.8739  F1=0.8864
+              precision    recall  f1-score   support
+
+           0       0.95      0.91      0.93      1383
+           1       0.33      0.52      0.41       124
+
+    accuracy                           0.87      1507
+   macro avg       0.64      0.71      0.67      1507
+weighted avg       0.90      0.87      0.89      1507
+
+[duration_model]  Accuracy=0.5963  F1=0.5730  (3-class classifier on 2722 actual-duration rows)
+              precision    recall  f1-score   support
+
+    extended       0.62      1.00      0.77       110
+      medium       0.38      0.26      0.30       160
+       short       0.67      0.63      0.65       275
+
+    accuracy                           0.60       545
+   macro avg       0.56      0.63      0.57       545
+weighted avg       0.57      0.60      0.57       545
+
+[severity_model]  Accuracy=0.8155  F1=0.8336
+              precision    recall  f1-score   support
+
+        High       0.18      0.23      0.20        13
+         Low       0.94      0.86      0.90      1307
+      Medium       0.35      0.57      0.44       187
+
+    accuracy                           0.82      1507
+   macro avg       0.49      0.55      0.51      1507
+weighted avg       0.86      0.82      0.83      1507

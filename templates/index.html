@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASTraM — Event Congestion Command</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+:root{
+  --navy-950:#0a0f1a;
+  --navy-900:#0e1626;
+  --navy-850:#121d33;
+  --navy-800:#16223c;
+  --navy-700:#1d2c4a;
+  --navy-600:#2a3d63;
+  --line:#243355;
+  --line-soft:#1a2745;
+  --paper:#f4f3ee;
+  --ink:#0e1626;
+  --ink-soft:#5a6377;
+  --ink-faint:#8c93a4;
+  --amber:#ff9f1c;
+  --amber-deep:#c9740a;
+  --red:#e23d3d;
+  --red-deep:#9c2222;
+  --green:#1fae6e;
+  --green-deep:#0f7a4c;
+  --blue:#3d8bff;
+  --font-display:'Oswald', sans-serif;
+  --font-body:'IBM Plex Sans', sans-serif;
+  --font-mono:'IBM Plex Mono', monospace;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+body{
+  font-family:var(--font-body);
+  background:var(--paper);
+  color:var(--ink);
+}
+::selection{background:var(--amber); color:var(--navy-950);}
+.topbar{
+  background:var(--navy-950);
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px 28px;
+  border-bottom:3px solid var(--amber);
+  position:sticky; top:0; z-index:50;
+}
+.topbar-left{display:flex; align-items:center; gap:14px;}
+.signal{
+  width:30px; height:46px; border-radius:6px;
+  background:#1a2238; border:1.5px solid #2c3856;
+  display:flex; flex-direction:column; align-items:center; justify-content:space-around; padding:4px 0;
+}
+.signal i{width:9px; height:9px; border-radius:50%; display:block;}
+.signal .r{background:var(--red); box-shadow:0 0 6px var(--red);}
+.signal .a{background:#3a4156;}
+.signal .g{background:#3a4156;}
+.brand-text h1{
+  font-family:var(--font-display); font-weight:600; font-size:21px; letter-spacing:0.5px;
+  text-transform:uppercase;
+}
+.brand-text p{font-size:11.5px; color:#9aa6c4; letter-spacing:0.3px; margin-top:1px;}
+.topbar-right{display:flex; align-items:center; gap:18px;}
+.live-pill{
+  display:flex; align-items:center; gap:7px;
+  font-family:var(--font-mono); font-size:11.5px; color:#bfe9d2;
+  background:rgba(31,174,110,0.12); border:1px solid rgba(31,174,110,0.4);
+  padding:5px 11px; border-radius:20px;
+}
+.live-dot{width:7px; height:7px; border-radius:50%; background:var(--green); animation:pulse 1.6s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.35;}}
+.clock{font-family:var(--font-mono); font-size:12.5px; color:#cdd5e8; text-align:right;}
+.clock span{display:block; font-size:10px; color:#7a86a3;}
+.shell{display:grid; grid-template-columns:280px 1fr; min-height:calc(100vh - 75px);}
+.sidebar{
+  background:var(--navy-900);
+  color:#dde3f0;
+  padding:22px 18px 30px;
+  border-right:1px solid var(--line);
+}
+.side-label{
+  font-family:var(--font-display); font-size:13px; letter-spacing:1.2px; text-transform:uppercase;
+  color:#fff; margin-bottom:3px; display:flex; align-items:center; gap:8px;
+}
+.side-sub{font-size:11px; color:#7a86a3; margin-bottom:16px;}
+.source-row{
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:12.5px; padding:8px 0; border-bottom:1px dashed var(--line-soft);
+}
+.source-row .name{display:flex; align-items:center; gap:8px; color:#c5cce0;}
+.dot-sm{width:6px; height:6px; border-radius:50%; background:var(--green);}
+.count-badge{
+  font-family:var(--font-mono); font-size:10.5px; color:#7a86a3;
+  background:var(--navy-800); padding:2px 7px; border-radius:10px;
+}
+.recent-block{margin-top:22px;}
+.recent-title{
+  font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:#7a86a3; margin-bottom:10px;
+}
+.empty-note{
+  font-size:12px; line-height:1.55; color:#9fb3e6;
+  background:rgba(61,139,255,0.1); border:1px solid rgba(61,139,255,0.25);
+  border-left:3px solid var(--blue);
+  padding:10px 12px; border-radius:4px;
+}
+.event-card{
+  font-size:11.5px; color:#cdd5e8; background:var(--navy-800);
+  border:1px solid var(--line); border-left:3px solid var(--amber);
+  padding:9px 11px; border-radius:4px; margin-bottom:8px;
+}
+.event-card .ec-top{display:flex; justify-content:space-between; font-family:var(--font-mono); color:#8c93a4; font-size:10px; margin-bottom:4px;}
+.btn-ghost-dark{
+  width:100%; margin-top:14px; background:var(--navy-800); color:#dde3f0;
+  border:1px solid var(--line); padding:9px 10px; border-radius:5px;
+  font-family:var(--font-body); font-size:12.5px; font-weight:500; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:7px;
+  transition:background .15s;
+}
+.btn-ghost-dark:hover{background:var(--navy-700);}
+.main{padding:30px 36px 80px; max-width:1180px;}
+.hero{margin-bottom:26px;}
+.hero h2{font-family:var(--font-display); font-size:30px; font-weight:600; letter-spacing:0.3px; display:flex; align-items:center; gap:10px;}
+.hero p{color:var(--ink-soft); font-size:13.5px; margin-top:4px;}
+.panel{
+  background:#fff; border:1px solid #ddd9cd; border-radius:8px;
+  padding:22px 24px; margin-bottom:20px;
+  box-shadow:0 1px 0 rgba(14,22,38,0.03);
+}
+.step-head{display:flex; align-items:center; gap:10px; margin-bottom:18px;}
+.step-num{
+  width:24px; height:24px; border-radius:50%; background:var(--navy-950); color:#fff;
+  font-family:var(--font-mono); font-size:12px; display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+.step-num.done{background:var(--green);}
+.step-title{font-family:var(--font-display); font-size:16px; font-weight:500; letter-spacing:0.2px; text-transform:uppercase;}
+.row-2{display:grid; grid-template-columns:1.4fr 1fr; gap:14px; margin-bottom:18px;}
+.row-4{display:grid; grid-template-columns:repeat(4,1fr); gap:12px;}
+label.field-label{display:block; font-size:11px; letter-spacing:0.6px; text-transform:uppercase; color:var(--ink-faint); margin-bottom:6px;}
+select, input[type=text], textarea{
+  width:100%; font-family:var(--font-body); font-size:13.5px; color:var(--ink);
+  background:#fcfbf8; border:1px solid #d8d4c6; border-radius:5px; padding:10px 12px;
+  appearance:none;
+}
+select{
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235a6377' stroke-width='2'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat:no-repeat; background-position:right 12px center; background-size:16px;
+  cursor:pointer;
+}
+textarea{resize:vertical; min-height:70px;}
+.btn{
+  border-radius:5px; padding:11px 16px; font-family:var(--font-body); font-weight:600; font-size:13px;
+  border:1px solid #d8d4c6; background:#fcfbf8; color:var(--ink); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:8px; transition:transform .08s, background .15s;
+}
+.btn:active{transform:scale(0.985);}
+.btn-amber{background:var(--amber); border-color:var(--amber-deep); color:#27170a;}
+.btn-amber:hover{background:#ffb142;}
+.btn-red{background:var(--red); border-color:var(--red-deep); color:#fff; font-size:14px; padding:13px;}
+.btn-red:hover{background:#ec5252;}
+.btn-block{width:100%;}
+.info-card{
+  background:var(--paper); border:1px solid #e2dfd3; border-radius:6px; padding:12px 14px;
+}
+.info-card .ic-label{font-size:10.5px; letter-spacing:0.8px; text-transform:uppercase; color:var(--ink-faint); margin-bottom:4px;}
+.info-card .ic-value{font-family:var(--font-mono); font-size:14.5px; font-weight:500;}
+.resolved-note{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--green-deep); margin-top:12px;}
+.stepper{display:flex; align-items:center; gap:8px;}
+.stepper button{
+  width:30px; height:30px; border-radius:5px; border:1px solid #d8d4c6; background:#fcfbf8;
+  font-size:16px; cursor:pointer; color:var(--ink);
+}
+.stepper input{width:80px; text-align:center;}
+.out-row{display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:20px;}
+.out-card{border-radius:7px; padding:13px 14px; background:var(--paper); border:1px solid #e2dfd3;}
+.out-card .ol{font-size:10px; letter-spacing:0.9px; text-transform:uppercase; color:var(--ink-faint); margin-bottom:6px;}
+.out-card .ov{font-family:var(--font-display); font-size:21px; font-weight:600;}
+.tag{display:inline-block; padding:2px 9px; border-radius:20px; font-size:11.5px; font-weight:600;}
+.tag-high{background:#fde3e3; color:var(--red-deep);}
+.tag-med{background:#fff0d9; color:var(--amber-deep);}
+.tag-low{background:#e1f4ea; color:var(--green-deep);}
+.out-card.severity .ov{font-size:17px;}
+.out-card.closure .ov{color:var(--red-deep);}
+.out-card.closure.no .ov{color:var(--green-deep);}
+.out-sub{font-size:10.5px; color:var(--ink-faint); margin-top:2px;}
+.sub-panel-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;}
+.sub-head{
+  font-size:11px; letter-spacing:0.8px; text-transform:uppercase; color:var(--ink-faint);
+  border:1px solid #e2dfd3; border-radius:6px; padding:10px 14px; margin-bottom:10px; background:var(--paper);
+}
+table.data-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+table.data-table th{
+  text-align:left; font-weight:500; color:var(--ink-faint); font-size:10.5px; text-transform:uppercase;
+  letter-spacing:0.5px; padding:7px 6px; border-bottom:1px solid #e2dfd3;
+}
+table.data-table td{padding:8px 6px; border-bottom:1px solid #efece3;}
+#map{height:300px; border-radius:6px; border:1px solid #e2dfd3; z-index:1;}
+.callout{border-radius:6px; padding:14px 16px; font-size:13px; line-height:1.6; margin-bottom:16px;}
+.callout-red{background:#fdebeb; border-left:4px solid var(--red); color:#7a1f1f;}
+.callout-amber{background:#fff6e6; border-left:4px solid var(--amber); color:#6b4709;}
+.callout-blue{background:#eaf2ff; border-left:4px solid var(--blue); color:#1d3f7a;}
+.callout-strong{font-weight:600;}
+.why-item{display:flex; gap:9px; font-size:13px; color:var(--ink-soft); margin-bottom:9px; line-height:1.5;}
+.why-item:before{content:"▸"; color:var(--amber-deep); flex-shrink:0;}
+.divider{border:none; border-top:1px solid #e2dfd3; margin:26px 0;}
+.status-done{display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--green-deep); font-weight:600; margin-top:10px;}
+.tabs{display:flex; gap:22px; border-bottom:1px solid #e2dfd3; margin-bottom:14px;}
+.tab{padding:8px 2px; font-size:12.5px; font-weight:600; color:var(--ink-faint); cursor:pointer; border-bottom:2px solid transparent;}
+.tab.active{color:var(--red-deep); border-color:var(--red);}
+.tablecount{font-size:12px; color:var(--ink-faint); margin-bottom:10px;}
+.table-wrap{overflow-x:auto;}
+footer{text-align:center; font-size:11px; color:var(--ink-faint); padding:24px 0 10px; font-family:var(--font-mono);}
+@media(max-width:900px){
+  .shell{grid-template-columns:1fr;}
+  .sidebar{display:none;}
+  .row-2,.out-row,.sub-panel-grid{grid-template-columns:1fr;}
+}
+#analysisError{display:none;}
+.toast{
+  position:fixed; bottom:24px; right:24px; background:var(--navy-950); color:#fff;
+  padding:14px 20px; border-radius:8px; font-size:13px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.3); z-index:100;
+  border-left:4px solid var(--green);
+  opacity:0; transition:opacity .3s;
+}
+.toast.show{opacity:1;}
+.toast.error{border-left-color:var(--red);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="signal"><i class="r"></i><i class="a"></i><i class="g"></i></div>
+    <div class="brand-text">
+      <h1>ASTraM</h1>
+      <p>Event congestion command · Bengaluru traffic police</p>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="live-pill"><span class="live-dot"></span>LIVE · COMMAND GRID</div>
+    <div class="clock" id="clock">--:--:--<span id="clockDate">--/--/----</span></div>
+  </div>
+</div>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="side-label">Live event monitor</div>
+    <div class="side-sub">Detected events from real-time sources</div>
+    <div class="source-row">
+      <div class="name"><span class="dot-sm"></span>Simulation</div>
+      <div class="count-badge" id="simCount">0 events</div>
+    </div>
+    <div class="source-row">
+      <div class="name"><span class="dot-sm" style="background:var(--blue)"></span>Traffic</div>
+      <div class="count-badge" id="trafficCount">0 events</div>
+    </div>
+    <div class="recent-block">
+      <div class="recent-title">Recent events (<span id="recentTotal">0</span> total)</div>
+      <div id="recentEvents">
+        <div class="empty-note">No events yet — waiting for simulation source.</div>
+      </div>
+    </div>
+    <button class="btn-ghost-dark" id="refreshNow">⟳ Refresh now</button>
+    <div class="recent-block">
+      <div class="recent-title">Grid status</div>
+      <div class="source-row"><div class="name">Officers on duty</div><div class="count-badge">412</div></div>
+      <div class="source-row"><div class="name">Active corridors</div><div class="count-badge" id="activeCorridors">0</div></div>
+      <div class="source-row"><div class="name">Model version</div><div class="count-badge">ASTraM v2.3</div></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="hero">
+      <h2>Event Congestion Command Dashboard</h2>
+      <p>Bengaluru Traffic Command &amp; Control · Powered by BTP ASTraM historical data</p>
+    </div>
+
+    <button class="btn btn-amber" id="loadDemo" style="margin-bottom:22px;">⚡ Load demo case</button>
+
+    <!-- STEP 1 -->
+    <section class="panel">
+      <div class="step-head"><div class="step-num">1</div><div class="step-title">Corridor selection &amp; location</div></div>
+      <div class="row-2">
+        <div>
+          <label class="field-label">Corridor name</label>
+          <select id="corridor"></select>
+        </div>
+        <div style="display:flex; align-items:flex-end;">
+          <button class="btn btn-block" id="refreshLocation">📍 Refresh location</button>
+        </div>
+      </div>
+      <div class="row-4">
+        <div class="info-card"><div class="ic-label">Corridor</div><div class="ic-value" id="ic-corridor">—</div></div>
+        <div class="info-card"><div class="ic-label">Zone</div><div class="ic-value" id="ic-zone">—</div></div>
+        <div class="info-card"><div class="ic-label">Junction</div><div class="ic-value" id="ic-junction">—</div></div>
+        <div class="info-card"><div class="ic-label">Coordinates</div><div class="ic-value" id="ic-coords">—</div></div>
+      </div>
+      <div class="resolved-note" id="locationStatus">✓ Location resolved</div>
+    </section>
+
+    <!-- STEP 2 -->
+    <section class="panel">
+      <div class="step-head"><div class="step-num">2</div><div class="step-title">Event details &amp; command analysis</div></div>
+      <div class="row-2">
+        <div>
+          <label class="field-label">Event type</label>
+          <select id="eventType">
+            <option>planned</option>
+            <option>unplanned</option>
+          </select>
+          <div style="height:14px"></div>
+          <label class="field-label">Event cause</label>
+          <select id="eventCause">
+            <option>public_event</option>
+            <option>vip_movement</option>
+            <option>protest</option>
+            <option>procession</option>
+            <option>construction</option>
+            <option>congestion</option>
+            <option>accident</option>
+            <option>vehiclebreakdown</option>
+            <option>waterlogging</option>
+            <option>potholes</option>
+          </select>
+          <div style="height:14px"></div>
+          <label class="field-label">Expected attendance (0 = unknown)</label>
+          <div class="stepper">
+            <button id="attMinus" type="button">–</button>
+            <input type="number" id="attendance" value="0" min="0" style="width:160px;text-align:center;padding:12px 16px;font-size:15px;">
+            <button id="attPlus" type="button">+</button>
+          </div>
+        </div>
+        <div>
+          <label class="field-label">Hour of day</label>
+          <div class="row-2" style="grid-template-columns:1fr 100px;gap:8px;margin-bottom:12px;">
+            <div class="stepper">
+              <button type="button" id="hourMinus">–</button>
+              <input type="number" id="hour" value="6" min="1" max="12" style="width:80px;text-align:center;padding:12px;font-size:15px;">
+              <button type="button" id="hourPlus">+</button>
+            </div>
+            <select id="hourAmPm" style="padding:10px;">
+              <option value="AM">AM</option>
+              <option value="PM" selected>PM</option>
+            </select>
+          </div>
+          <label class="field-label" style="margin-top:4px;">Day of week</label>
+          <select id="day" style="margin-bottom:12px;">
+            <option value="0">Monday</option>
+            <option value="1">Tuesday</option>
+            <option value="2">Wednesday</option>
+            <option value="3">Thursday</option>
+            <option value="4">Friday</option>
+            <option value="5" selected>Saturday</option>
+            <option value="6">Sunday</option>
+          </select>
+          <label class="field-label" style="margin-top:4px;">Month</label>
+          <select id="month">
+            <option value="1">January</option>
+            <option value="2">February</option>
+            <option value="3">March</option>
+            <option value="4">April</option>
+            <option value="5">May</option>
+            <option value="6">June</option>
+            <option value="7">July</option>
+            <option value="8">August</option>
+            <option value="9">September</option>
+            <option value="10">October</option>
+            <option value="11">November</option>
+            <option value="12" selected>December</option>
+          </select>
+        </div>
+      </div>
+      <div id="analysisError" class="callout callout-red" style="margin-bottom:12px;"></div>
+      <button class="btn btn-red btn-block" id="runAnalysis">⚡ Run command analysis</button>
+    </section>
+
+    <!-- STEP 3: OUTPUT -->
+    <section class="panel" id="outputPanel" style="display:none;">
+      <div class="step-head"><div class="step-num done">✓</div><div class="step-title">Command output</div></div>
+
+      <div class="out-row" id="outputCards">
+        <div class="out-card severity"><div class="ol">Severity</div><span class="tag" id="r-severityTag">—</span></div>
+        <div class="out-card"><div class="ol">Score</div><div class="ov" id="r-score">—</div></div>
+        <div class="out-card"><div class="ol">Priority</div><div class="ov" id="r-priority">—</div></div>
+        <div class="out-card closure" id="r-closureCard"><div class="ol">Road closure</div><div class="ov" id="r-closure">—</div></div>
+        <div class="out-card"><div class="ol">Est. duration</div><div class="ov" id="r-duration">—</div><div class="out-sub" id="r-durTag">—</div></div>
+      </div>
+
+      <div class="sub-panel-grid">
+        <div>
+          <div class="sub-head">Location context</div>
+          <table class="data-table">
+            <tr><td>Corridor</td><td id="t-corridor">—</td></tr>
+            <tr><td>Zone</td><td id="t-zone">—</td></tr>
+            <tr><td>Junction</td><td id="t-junction">—</td></tr>
+            <tr><td>Latitude</td><td id="t-lat">—</td></tr>
+            <tr><td>Longitude</td><td id="t-lng">—</td></tr>
+          </table>
+          <div style="height:16px"></div>
+          <div class="sub-head">Temporal context</div>
+          <table class="data-table">
+            <tr><td>Event type</td><td id="t-type">—</td></tr>
+            <tr><td>Event cause</td><td id="t-cause">—</td></tr>
+            <tr><td>Hour</td><td id="t-hour">—</td></tr>
+            <tr><td>Day</td><td id="t-day">—</td></tr>
+            <tr><td>Month</td><td id="t-month">—</td></tr>
+            <tr><td>Weekend</td><td id="t-weekend">—</td></tr>
+          </table>
+        </div>
+        <div>
+          <div class="sub-head">Impact zone map</div>
+          <div id="map"></div>
+        </div>
+      </div>
+
+      <div class="sub-head">Recommended action</div>
+      <div class="callout" id="recAction">—</div>
+
+      <div class="sub-head">Resource deployment plan <span id="r-source" style="font-size:10px;color:var(--green-deep);"></span></div>
+      <table class="data-table" style="margin-bottom:14px;">
+        <tr><td>Officers required</td><td id="r-officers">—</td></tr>
+        <tr><td>Barricades required</td><td id="r-barricades">—</td></tr>
+        <tr><td>Patrol vehicles</td><td id="r-patrol">—</td></tr>
+        <tr><td>Monitoring level</td><td id="r-monLevel">—</td></tr>
+        <tr><td>Impact radius (km)</td><td id="r-radius">—</td></tr>
+        <tr><td>Deployment points</td><td id="r-deployPoints">—</td></tr>
+      </table>
+      <div class="callout callout-amber" id="attendanceNote"></div>
+
+      <div class="sub-head">Diversion plan</div>
+      <p style="font-size:13px; margin-bottom:8px;"><strong>Strategy:</strong> <span id="diversionStrategy">—</span></p>
+      <div id="diversionRoutes"></div>
+
+      <div style="height:10px"></div>
+      <div class="sub-head">Why this result</div>
+      <div id="whyResult"></div>
+
+      <div class="status-done">✓ Command analysis completed</div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- STEP 4: GROUND TRUTH -->
+    <section class="panel">
+      <div class="step-head"><div class="step-num">4</div><div class="step-title">Submit ground truth</div></div>
+      <p style="font-size:12.5px; color:var(--ink-soft); margin-bottom:16px;">Record actual outcomes to improve future predictions via the retraining pipeline.</p>
+      <div class="row-2">
+        <div>
+          <label class="field-label">Actual severity outcome</label>
+          <select id="actualSeverity">
+            <option value="">Select outcome…</option>
+            <option>Low</option>
+            <option>Medium</option>
+            <option>High</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Actual duration (hours)</label>
+          <div class="stepper">
+            <button id="durMinus" type="button">–</button>
+            <input type="text" id="actualDuration" value="0.00" readonly>
+            <button id="durPlus" type="button">+</button>
+          </div>
+        </div>
+      </div>
+      <div class="row-2" style="margin-bottom:12px;">
+        <div>
+          <label class="field-label">Actual officers deployed</label>
+          <input type="number" id="actualOfficers" value="" min="0" placeholder="e.g. 10">
+        </div>
+        <div>
+          <label class="field-label">Actual barricades used</label>
+          <input type="number" id="actualBarricades" value="" min="0" placeholder="e.g. 8">
+        </div>
+      </div>
+      <label class="field-label">Actual patrol vehicles used</label>
+      <input type="number" id="actualPatrols" value="" min="0" placeholder="e.g. 4" style="margin-bottom:12px;">
+      <label class="field-label">Notes (what actually happened on ground)</label>
+      <textarea id="groundNotes" placeholder="e.g. Crowd dispersed early, diversion held without incident…"></textarea>
+      <div style="height:16px"></div>
+      <button class="btn btn-red btn-block" id="submitGroundTruth">Submit ground truth</button>
+      <div style="height:8px"></div>
+      <div id="gtMessage"></div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- STEP 5: HISTORY -->
+    <section class="panel">
+      <div class="step-head"><div class="step-num">5</div><div class="step-title">Prediction history &amp; learning loop</div></div>
+      <div class="tabs">
+        <div class="tab active" data-tab="feedback">Feedback log</div>
+        <div class="tab" data-tab="retrain">Retraining dataset</div>
+        <div class="tab" data-tab="live">Live Monitor</div>
+      </div>
+      <div class="tablecount">Total logged events: <strong id="logCount">0</strong></div>
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+        <select id="sortColSelect" style="width:auto;padding:6px 10px;font-size:12px;">
+          <option value="default">Default (Timestamp)</option>
+          <option value="timestamp">Timestamp</option>
+          <option value="event_type">Type</option>
+          <option value="event_cause">Cause</option>
+          <option value="corridor">Corridor</option>
+          <option value="zone">Zone</option>
+          <option value="junction">Junction</option>
+          <option value="predicted_severity_label">Severity</option>
+        </select>
+        <select id="sortDirSelect" style="width:auto;padding:6px 10px;font-size:12px;">
+          <option value="desc">Newest first</option>
+          <option value="asc">Oldest first</option>
+        </select>
+        <span style="font-size:12px;color:var(--ink-soft);">Show</span>
+        <select id="perPageSelect" style="width:auto;padding:6px 10px;font-size:12px;">
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="0">All</option>
+        </select>
+        <span style="font-size:12px;color:var(--ink-soft);">per page</span>
+      </div>
+      <div id="timeFilterBar" style="display:none;gap:12px;align-items:center;margin-bottom:10px;flex-wrap:wrap;padding:10px 14px;background:var(--paper);border:1px solid #e2dfd3;border-radius:6px;">
+        <span style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--ink-faint);letter-spacing:0.5px;">Filter by time</span>
+        <div class="stepper" style="display:flex;align-items:center;gap:6px;">
+          <button type="button" id="fHrMinus" style="width:26px;height:26px;border-radius:4px;border:1px solid #d8d4c6;background:#fff;cursor:pointer;">–</button>
+          <input type="number" id="fHour" value="6" min="1" max="12" style="width:60px;text-align:center;padding:4px;font-size:13px;">
+          <button type="button" id="fHrPlus" style="width:26px;height:26px;border-radius:4px;border:1px solid #d8d4c6;background:#fff;cursor:pointer;">+</button>
+        </div>
+        <select id="fAmPm" style="width:auto;padding:4px 8px;font-size:12px;">
+          <option value="AM">AM</option>
+          <option value="PM">PM</option>
+        </select>
+        <select id="fDay" style="width:auto;padding:4px 8px;font-size:12px;">
+          <option value="">Any day</option>
+          <option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option>
+          <option value="3">Thursday</option><option value="4">Friday</option><option value="5">Saturday</option><option value="6">Sunday</option>
+        </select>
+        <select id="fMonth" style="width:auto;padding:4px 8px;font-size:12px;">
+          <option value="">Any month</option>
+          <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option><option value="4">Apr</option>
+          <option value="5">May</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Aug</option>
+          <option value="9">Sep</option><option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+        </select>
+        <select id="fYear" style="width:auto;padding:4px 8px;font-size:12px;">
+          <option value="">Any year</option>
+          <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option>
+        </select>
+        <button id="fClear" style="border:1px solid var(--ink-faint);background:#fff;border-radius:4px;padding:4px 12px;cursor:pointer;font-size:12px;">Clear</button>
+      </div>
+      <div class="table-wrap" id="feedbackTab">
+        <table class="data-table" id="logTable">
+          <thead>
+            <tr>
+              <th>Timestamp</th><th>Type</th><th>Cause</th><th>Corridor</th><th>Zone</th><th>Junction</th><th>Severity</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="logBody"></tbody>
+        </table>
+      </div>
+      <div id="pagination" style="display:flex;align-items:center;gap:12px;margin-top:10px;font-size:13px;justify-content:center;">
+        <button id="pagePrev" style="border:1px solid var(--ink-faint);background:#fff;border-radius:4px;padding:4px 12px;cursor:pointer;font-size:13px;">← Prev</button>
+        <span>Page <strong id="pageCurrent">1</strong> of <strong id="pageTotal">1</strong></span>
+        <button id="pageNext" style="border:1px solid var(--ink-faint);background:#fff;border-radius:4px;padding:4px 12px;cursor:pointer;font-size:13px;">Next →</button>
+      </div>
+      <div class="table-wrap" id="retrainTab" style="display:none;">
+        <div class="tablecount">Total rows: <strong id="retrainCount">0</strong></div>
+        <div style="overflow-x:auto;"><table class="data-table" id="retrainTable">
+          <thead id="retrainHead"></thead>
+          <tbody id="retrainBody"></tbody>
+        </table></div>
+      </div>
+      <div id="liveTab" style="display:none;">
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+          <button class="btn btn-red" id="rtStartBtn">▶ Start</button>
+          <button class="btn" id="rtStopBtn">■ Stop</button>
+          <span style="font-size:12px;color:var(--ink-soft);">Source:
+            <select id="rtSourceType" style="width:auto;padding:4px 8px;font-size:12px;">
+              <option value="simulation">Simulation</option>
+              <option value="traffic_api">Bing Maps Traffic API</option>
+              <option value="tomtom">TomTom Traffic API</option>
+            </select>
+          </span>
+          <span id="rtApiKeyRow" style="display:none;gap:6px;align-items:center;">
+            <input type="password" id="rtApiKey" placeholder="Bing Maps API key" style="width:200px;padding:4px 8px;font-size:12px;font-family:var(--font-mono);">
+            <button class="btn" id="rtSaveKey" style="padding:4px 10px;font-size:11px;">Save</button>
+          </span>
+          <span class="live-pill" id="rtStatus" style="font-size:12px;padding:4px 10px;background:rgba(31,174,110,0.08);border-color:rgba(31,174,110,0.25);"><span class="live-dot"></span>STOPPED</span>
+          <span style="font-size:12px;color:var(--ink-faint);">Events: <strong id="rtEventCount">0</strong></span>
+          <button class="btn" id="rtClearBtn">✕ Clear</button>
+        </div>
+        <div id="rtSourceStatus" style="font-size:11px;color:var(--ink-faint);margin-bottom:8px;"></div>
+        <div id="liveFeed" style="max-height:500px;overflow-y:auto;border:1px solid #e2dfd3;border-radius:6px;padding:8px;"></div>
+      </div>
+      <div style="height:16px"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn" id="downloadCsv">⬇ Download feedback log (CSV)</button>
+        <button class="btn" id="clearAllBtn" style="border-color:var(--red);color:var(--red);">✕ Clear all feedback</button>
+        <button class="btn" id="retrainResourceBtn">⟳ Retrain resource model</button>
+      </div>
+      <div id="retrainStatus" style="font-size:12px;margin-top:6px;color:var(--ink-soft);"></div>
+    </section>
+
+    <footer>ASTraM EVENT CONGESTION COMMAND · BENGALURU TRAFFIC POLICE · INTERNAL OPERATIONS USE ONLY</footer>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ============ DATA ============
+let corridorData = {};
+let lastLogTimestamp = "";
+let map = null, circleLayer = null, markerGroup = null, corridorMarker = null;
+
+// ============ CLOCK ============
+function tickClock(){
+  const now = new Date();
+  const time = now.toLocaleTimeString('en-GB');
+  const date = now.toLocaleDateString('en-GB');
+  document.getElementById('clock').firstChild.textContent = time;
+  document.getElementById('clockDate').textContent = date;
+}
+tickClock(); setInterval(tickClock, 1000);
+
+// ============ TOAST ============
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ============ LOAD CORRIDORS ============
+async function loadCorridors() {
+  try {
+    const res = await fetch('/api/corridors');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    corridorData = data;
+    const sel = document.getElementById('corridor');
+    sel.innerHTML = Object.keys(data).sort().map(c => `<option>${c}</option>`).join('');
+    document.getElementById('activeCorridors').textContent = Object.keys(data).length;
+    updateLocation();
+  } catch(e) {
+    showToast('Failed to load corridors', true);
+  }
+}
+
+// ============ LOCATION ============
+function updateLocation(){
+  const c = document.getElementById('corridor').value;
+  const d = corridorData[c];
+  if (!d) return;
+  document.getElementById('ic-corridor').textContent = c;
+  document.getElementById('ic-zone').textContent = d.zone;
+  document.getElementById('ic-junction').textContent = d.junction;
+  document.getElementById('ic-coords').textContent = d.lat.toFixed(5) + ', ' + d.lng.toFixed(5);
+  document.getElementById('locationStatus').textContent = '✓ Location resolved';
+  if (map) showCorridorOnMap(d.lat, d.lng, c);
+}
+document.getElementById('corridor').addEventListener('change', updateLocation);
+document.getElementById('refreshLocation').addEventListener('click', updateLocation);
+
+// ============ HOUR STEPPER ============
+function hourStepper(delta){
+  const el = document.getElementById('hour');
+  let v = parseInt(el.value) + delta;
+  if (v < 1) v = 12;
+  if (v > 12) v = 1;
+  el.value = v;
+}
+document.getElementById('hourMinus').addEventListener('click', () => hourStepper(-1));
+document.getElementById('hourPlus').addEventListener('click', () => hourStepper(1));
+
+// ============ STEPPER ============
+function stepper(inputId, minusId, plusId, step, min){
+  const input = document.getElementById(inputId);
+  document.getElementById(minusId).addEventListener('click', ()=>{
+    let v = parseFloat(input.value) - step;
+    input.value = Math.max(min, v).toFixed(inputId==='actualDuration'?2:0);
+  });
+  document.getElementById(plusId).addEventListener('click', ()=>{
+    let v = parseFloat(input.value) + step;
+    input.value = v.toFixed(inputId==='actualDuration'?2:0);
+  });
+}
+stepper('attendance','attMinus','attPlus',100,0);
+stepper('actualDuration','durMinus','durPlus',0.5,0);
+
+// ============ MAP ============
+function initMap(lat, lng){
+  if(!map){
+    map = L.map('map', {scrollWheelZoom:true, zoomControl:true}).setView([lat,lng], 14);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+      maxZoom:19
+    }).addTo(map);
+    L.control.scale({imperial:false}).addTo(map);
+  } else {
+    map.setView([lat,lng], 14);
+  }
+}
+function drawImpactZone(lat, lng, radiusKm, severity, junctions){
+  if(circleLayer) map.removeLayer(circleLayer);
+  if(markerGroup) map.removeLayer(markerGroup);
+  const color = severity === 'High' ? '#e23d3d' : severity === 'Medium' ? '#ff9f1c' : '#1fae6e';
+  circleLayer = L.circle([lat,lng], {
+    radius: radiusKm*1000, color, weight:2, fillColor:color, fillOpacity:0.12
+  }).addTo(map);
+  markerGroup = L.layerGroup().addTo(map);
+  L.marker([lat,lng], {
+    icon: L.divIcon({
+      className:'',
+      html:`<div style="background:#fff;border:2px solid ${color};border-radius:6px;padding:4px 8px;font-family:IBM Plex Mono;font-size:11px;font-weight:600;color:#1a1a2e;box-shadow:0 2px 6px rgba(0,0,0,0.2);">⊙ Core</div>`,
+      iconSize:[0,0]
+    })
+  }).addTo(markerGroup);
+  if (junctions && junctions.length) {
+    junctions.forEach((j, i) => {
+      L.marker([j.lat, j.lng], {
+        icon: L.divIcon({
+          className:'',
+          html:`<div style="background:#1a1a2e;color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-family:IBM Plex Mono;font-size:10px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.3);border:2px solid ${color};">${i+1}</div>`,
+          iconSize:[26,26]
+        })
+      }).bindTooltip(j.name, {permanent:false, direction:'top', offset:[0,-14]}).addTo(markerGroup);
+      L.polyline([[lat,lng],[j.lat,j.lng]], {color,weight:1.5,opacity:0.4,dashArray:'4,6'}).addTo(markerGroup);
+    });
+  }
+}
+
+function showCorridorOnMap(lat, lng, name){
+  if (corridorMarker) map.removeLayer(corridorMarker);
+  corridorMarker = L.marker([lat,lng], {
+    icon: L.divIcon({
+      className:'',
+      html:`<div style="background:var(--navy-950);color:#fff;border-radius:6px;padding:2px 8px;font-family:IBM Plex Sans;font-size:11px;font-weight:600;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.25);border:1px solid var(--amber);">${name}</div>`,
+      iconSize:[0,0]
+    })
+  }).addTo(map);
+  map.setView([lat,lng], 14);
+}
+
+// ============ RUN ANALYSIS ============
+async function runAnalysis(){
+  const corridor = document.getElementById('corridor').value;
+  const loc = corridorData[corridor];
+  if (!loc) { showToast('Select a corridor first', true); return; }
+
+  const payload = {
+    event_type: document.getElementById('eventType').value,
+    event_cause: document.getElementById('eventCause').value,
+    latitude: loc.lat,
+    longitude: loc.lng,
+    corridor: corridor,
+    zone: loc.zone,
+    junction: loc.junction,
+    hour: (parseInt(document.getElementById('hour').value) % 12) + (document.getElementById('hourAmPm').value === 'PM' ? 12 : 0),
+    day_of_week: +document.getElementById('day').value,
+    month: +document.getElementById('month').value,
+    expected_attendance: +document.getElementById('attendance').value,
+  };
+
+  document.getElementById('runAnalysis').textContent = '⏳ Analyzing…';
+  document.getElementById('runAnalysis').disabled = true;
+  document.getElementById('analysisError').style.display = 'none';
+
+  try {
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const r = await res.json();
+    if (r.error) throw new Error(r.error);
+
+    lastLogTimestamp = r.log_timestamp;
+
+    // Output cards
+    const tagClass = r.severity_label==='High'?'tag-high':r.severity_label==='Medium'?'tag-med':'tag-low';
+    document.getElementById('r-severityTag').className = 'tag '+tagClass;
+    document.getElementById('r-severityTag').textContent = r.severity_label;
+    document.getElementById('r-score').innerHTML = r.severity_score + '<span style="font-size:13px;color:var(--ink-faint)">/100</span>';
+    document.getElementById('r-priority').textContent = r.priority;
+    const cc = document.getElementById('r-closureCard');
+    cc.classList.toggle('no', !r.road_closure);
+    document.getElementById('r-closure').textContent = r.road_closure ? 'YES ⚠' : 'NO';
+    document.getElementById('r-duration').textContent = r.duration_hours + 'h';
+    const durMap = {short:'standard', medium:'prolonged', extended:'extended'};
+    document.getElementById('r-durTag').textContent = durMap[r.duration_bucket] || r.duration_bucket;
+
+    // Location & temporal context
+    document.getElementById('t-corridor').textContent = corridor;
+    document.getElementById('t-zone').textContent = r.zone;
+    document.getElementById('t-junction').textContent = r.junction;
+    document.getElementById('t-lat').textContent = loc.lat.toFixed(5);
+    document.getElementById('t-lng').textContent = loc.lng.toFixed(5);
+    document.getElementById('t-type').textContent = payload.event_type;
+    document.getElementById('t-cause').textContent = payload.event_cause;
+    const displayH = payload.hour === 0 ? 12 : (payload.hour > 12 ? payload.hour - 12 : payload.hour);
+    const displayA = payload.hour < 12 ? 'AM' : 'PM';
+    document.getElementById('t-hour').textContent = payload.hour + ':00 (' + displayH + ' ' + displayA + ')';
+    document.getElementById('t-day').textContent = document.getElementById('day').selectedOptions[0].text;
+    document.getElementById('t-month').textContent = document.getElementById('month').selectedOptions[0].text;
+    document.getElementById('t-weekend').textContent = payload.day_of_week >= 5 ? 'Yes' : 'No';
+
+    // Recommended action
+    const rec = document.getElementById('recAction');
+    if (r.severity_label === 'High') {
+      rec.className = 'callout callout-red';
+      rec.innerHTML = '<span class="callout-strong">IMMEDIATE DEPLOYMENT:</span> ' + r.recommended_action;
+    } else if (r.severity_label === 'Medium') {
+      rec.className = 'callout callout-amber';
+      rec.innerHTML = '<span class="callout-strong">ELEVATED RESPONSE:</span> ' + r.recommended_action;
+    } else {
+      rec.className = 'callout callout-blue';
+      rec.innerHTML = '<span class="callout-strong">STANDARD MONITORING:</span> ' + r.recommended_action;
+    }
+
+    // Resources
+    const resrc = r.resources;
+    document.getElementById('r-officers').textContent = resrc.officers_required;
+    document.getElementById('r-barricades').textContent = resrc.barricades_required;
+    document.getElementById('r-patrol').textContent = resrc.patrol_vehicles_required;
+    document.getElementById('r-monLevel').textContent = resrc.monitoring_level;
+    document.getElementById('r-radius').textContent = resrc.impact_radius_km;
+    const srcEl = document.getElementById('r-source');
+    if (resrc.resource_source === 'model') {
+      srcEl.textContent = '● DATA-DRIVEN';
+      srcEl.style.color = 'var(--green-deep)';
+    } else {
+      srcEl.textContent = '● RULE-BASED';
+      srcEl.style.color = 'var(--amber-deep)';
+    }
+    const juncNames = (r.nearby_junctions || []).map((j,i) => (i+1)+'. '+j.name).join('; ');
+    document.getElementById('r-deployPoints').innerHTML = resrc.deployment_points.join(', ') + (juncNames ? '<br><span style="font-size:11px;color:var(--ink-faint)">On map: ' + juncNames + '</span>' : '');
+
+    const attNote = document.getElementById('attendanceNote');
+    if (payload.expected_attendance > 0) {
+      attNote.className = 'callout callout-blue';
+      attNote.textContent = 'NOTE: resource estimate scaled for expected attendance of ' + payload.expected_attendance.toLocaleString() + '.';
+    } else {
+      attNote.className = 'callout callout-amber';
+      attNote.textContent = 'NOTE: officer estimate uses a minimum traffic baseline. Specify expected attendance for more accurate resource planning.';
+    }
+
+    // Diversion
+    const rt = r.routes;
+    document.getElementById('diversionStrategy').textContent = rt.diversion_strategy;
+    document.getElementById('diversionRoutes').innerHTML = rt.alternate_routes.map(rr =>
+      '<div class="why-item">' + rr + '</div>'
+    ).join('');
+
+    // Why this result
+    const whys = [];
+    if (r.road_closure) whys.push('Predicted road closure increases diversion and lane management pressure.');
+    if (r.priority === 'High') whys.push('High priority requires faster field response and elevated alert.');
+    whys.push(payload.event_cause.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()) + ' events require proactive traffic control.');
+    whys.push(r.duration_bucket === 'extended'
+      ? 'Extended duration ('+r.duration_hours+' hrs) requires sustained resource deployment and shift planning.'
+      : 'Duration of '+r.duration_hours+' hrs fits within a standard patrol window.');
+    if (payload.day_of_week >= 5) whys.push('Weekend timing amplifies event-driven traffic volume.');
+    if (payload.hour >= 17 && payload.hour <= 22) whys.push('Evening hours are a high-incident window in Bengaluru.');
+    document.getElementById('whyResult').innerHTML = whys.map(w => '<div class="why-item">'+w+'</div>').join('');
+
+    // Show panel first so map container has dimensions
+    document.getElementById('outputPanel').style.display = 'block';
+    document.getElementById('outputPanel').scrollIntoView({behavior:'smooth', block:'start'});
+
+    // Map — must init after panel is visible
+    initMap(loc.lat, loc.lng);
+    drawImpactZone(loc.lat, loc.lng, resrc.impact_radius_km, r.severity_label, r.nearby_junctions);
+    setTimeout(() => { if (map) map.invalidateSize(); }, 100);
+
+    // Update sidebar
+    document.getElementById('trafficCount').textContent = '1 events';
+    const recent = document.getElementById('recentEvents');
+    const timeStr = new Date().toLocaleTimeString('en-GB');
+    recent.innerHTML =
+      '<div class="event-card"><div class="ec-top"><span>'+timeStr+'</span><span>'+r.severity_label+'</span></div><div>'+corridor+' · '+payload.event_cause.replace(/_/g,' ')+'</div></div>' +
+      recent.innerHTML;
+    document.getElementById('recentTotal').textContent = recent.children.length;
+
+    showToast('Analysis complete');
+  } catch(e) {
+    const errDiv = document.getElementById('analysisError');
+    errDiv.textContent = 'Analysis failed: ' + e.message;
+    errDiv.style.display = 'block';
+    showToast('Analysis failed', true);
+  } finally {
+    document.getElementById('runAnalysis').textContent = '⚡ Run command analysis';
+    document.getElementById('runAnalysis').disabled = false;
+  }
+}
+document.getElementById('runAnalysis').addEventListener('click', runAnalysis);
+
+// ============ REFRESH ============
+document.getElementById('refreshNow').addEventListener('click', ()=>{
+  const count = parseInt(document.getElementById('simCount').textContent) || 0;
+  document.getElementById('simCount').textContent = (count + 1) + ' events';
+  showToast('Refreshed');
+});
+
+// ============ DEMO ============
+document.getElementById('loadDemo').addEventListener('click', ()=>{
+  document.getElementById('corridor').value = 'Mysore Road';
+  document.getElementById('eventType').value = 'planned';
+  document.getElementById('eventCause').value = 'public_event';
+  document.getElementById('hour').value = 6;
+  document.getElementById('hourAmPm').value = 'PM';
+  document.getElementById('day').value = 5;
+  document.getElementById('month').value = 12;
+  document.getElementById('attendance').value = 5000;
+  updateLocation();
+  if (map) initMap(12.9627, 77.5684);
+  runAnalysis();
+});
+
+// ============ GROUND TRUTH ============
+document.getElementById('submitGroundTruth').addEventListener('click', async ()=>{
+  const sev = document.getElementById('actualSeverity').value;
+  if (!sev) { showToast('Please select actual severity outcome', true); return; }
+  if (!lastLogTimestamp) { showToast('Run an analysis first', true); return; }
+
+  const btn = document.getElementById('submitGroundTruth');
+  btn.textContent = '⏳ Submitting…';
+  btn.disabled = true;
+
+  try {
+    const body = {
+      log_timestamp: lastLogTimestamp,
+      actual_severity: sev,
+      actual_duration: parseFloat(document.getElementById('actualDuration').value) || 0,
+      notes: document.getElementById('groundNotes').value,
+    };
+    const ao = document.getElementById('actualOfficers').value;
+    const ab = document.getElementById('actualBarricades').value;
+    const ap = document.getElementById('actualPatrols').value;
+    if (ao) body.actual_officers = parseFloat(ao);
+    if (ab) body.actual_barricades = parseFloat(ab);
+    if (ap) body.actual_patrols = parseFloat(ap);
+
+    const res = await fetch('/api/ground_truth', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const r = await res.json();
+    if (r.ok) {
+      showToast('Ground truth recorded');
+      document.getElementById('actualSeverity').value = '';
+      document.getElementById('actualDuration').value = '0.00';
+      document.getElementById('groundNotes').value = '';
+      document.getElementById('actualOfficers').value = '';
+      document.getElementById('actualBarricades').value = '';
+      document.getElementById('actualPatrols').value = '';
+      loadFeedbackLog();
+    } else {
+      showToast('Failed: ' + (r.error || 'unknown'), true);
+    }
+  } catch(e) {
+    showToast('Submission failed', true);
+  } finally {
+    btn.textContent = 'Submit ground truth';
+    btn.disabled = false;
+  }
+});
+
+// ============ CLEAR ALL ============
+document.getElementById('clearAllBtn').addEventListener('click', clearAllFeedback);
+
+// ============ RETRAIN RESOURCE MODEL ============
+document.getElementById('retrainResourceBtn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('retrainResourceBtn');
+  const status = document.getElementById('retrainStatus');
+  btn.textContent = '⏳ Training…';
+  btn.disabled = true;
+  status.textContent = 'Training resource model from feedback data…';
+  try {
+    const res = await fetch('/api/retrain_resource_model', {method:'POST'});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const r = await res.json();
+    if (r.ok && r.metrics && r.metrics.models) {
+      const lines = r.metrics.models.map(m =>
+        m.model + ': MAE=' + m.mae + ', R²=' + m.r2 + ' (' + m.rows + ' rows' + (m.actual_gt_rows > 0 ? ', ' + m.actual_gt_rows + ' actual GT' : '') + ')'
+      );
+      status.innerHTML = '✓ Models trained: ' + lines.join(' | ');
+      showToast('Resource models retrained');
+    } else {
+      status.textContent = 'Training failed: ' + (r.error || 'unknown');
+      showToast('Retrain failed', true);
+    }
+  } catch(e) {
+    status.textContent = 'Error: ' + e.message;
+    showToast('Retrain error', true);
+  } finally {
+    btn.textContent = '⟳ Retrain resource model from feedback data';
+    btn.disabled = false;
+  }
+});
+
+// ============ FEEDBACK LOG ============
+let feedbackRows = [];
+let feedbackPage = 1;
+
+function setFilterDefaults() {
+  const now = new Date();
+  let h = now.getHours();
+  document.getElementById('fAmPm').value = h >= 12 ? 'PM' : 'AM';
+  document.getElementById('fHour').value = h % 12 || 12;
+  document.getElementById('fDay').value = String(now.getDay());
+  document.getElementById('fMonth').value = String(now.getMonth() + 1);
+  document.getElementById('fYear').value = String(now.getFullYear());
+}
+
+document.getElementById('sortColSelect').addEventListener('change', () => {
+  const v = document.getElementById('sortColSelect').value;
+  if (v === 'default') {
+    document.getElementById('sortColSelect').value = 'timestamp';
+    document.getElementById('sortDirSelect').value = 'desc';
+    document.getElementById('perPageSelect').value = '10';
+    setFilterDefaults();
+    document.getElementById('timeFilterBar').style.display = 'flex';
+    feedbackPage = 1;
+    renderFeedbackTable();
+    showToast('Default view restored');
+    return;
+  }
+  const show = v === 'timestamp';
+  document.getElementById('timeFilterBar').style.display = show ? 'flex' : 'none';
+  feedbackPage = 1;
+  renderFeedbackTable();
+});
+document.getElementById('sortDirSelect').addEventListener('change', () => { feedbackPage = 1; renderFeedbackTable(); });
+document.getElementById('perPageSelect').addEventListener('change', () => { feedbackPage = 1; renderFeedbackTable(); });
+document.getElementById('pagePrev').addEventListener('click', () => { if (feedbackPage > 1) { feedbackPage--; renderFeedbackTable(); } });
+document.getElementById('pageNext').addEventListener('click', () => {
+  const perPage = parseInt(document.getElementById('perPageSelect').value) || feedbackRows.length;
+  const totalPages = Math.max(1, Math.ceil(feedbackRows.length / perPage));
+  if (feedbackPage < totalPages) { feedbackPage++; renderFeedbackTable(); }
+});
+document.getElementById('fClear').addEventListener('click', () => {
+  setFilterDefaults();
+  feedbackPage = 1; renderFeedbackTable();
+});
+['fHrMinus','fHrPlus','fHour','fAmPm','fDay','fMonth','fYear'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('change', () => { feedbackPage = 1; renderFeedbackTable(); });
+  if (el && el.tagName === 'BUTTON') el.addEventListener('click', () => {
+    if (id === 'fHrMinus') { let v = parseInt(document.getElementById('fHour').value) - 1; if (v < 1) v = 12; document.getElementById('fHour').value = v; }
+    if (id === 'fHrPlus') { let v = parseInt(document.getElementById('fHour').value) + 1; if (v > 12) v = 1; document.getElementById('fHour').value = v; }
+    feedbackPage = 1; renderFeedbackTable();
+  });
+});
+
+function hourTo24(h, ampm) { return ampm === 'AM' ? (h % 12) : (h % 12) + 12; }
+
+function tsVal(r) { return r.log_timestamp || r.timestamp || ''; }
+
+function parseTs(ts) {
+  const m = ts.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/);
+  if (!m) return null;
+  return { year: +m[1], month: +m[2], day: +m[3], hour: +m[4], minute: +m[5] };
+}
+
+function passesTimeFilter(r) {
+  const ts = parseTs(tsVal(r));
+  if (!ts) return true;
+  const fYear = document.getElementById('fYear').value;
+  if (fYear && ts.year !== parseInt(fYear)) return false;
+  const fDay = document.getElementById('fDay').value;
+  const fMonth = document.getElementById('fMonth').value;
+  if (fDay) { const rDay = r.day_of_week != null ? parseInt(r.day_of_week) : ts.day % 7; if (rDay !== parseInt(fDay)) return false; }
+  if (fMonth) { const rMonth = r.month != null ? parseInt(r.month) : ts.month; if (rMonth !== parseInt(fMonth)) return false; }
+  const fHour = parseInt(document.getElementById('fHour').value) || 6;
+  const fAmPm = document.getElementById('fAmPm').value;
+  const filter24 = hourTo24(fHour, fAmPm);
+  const rHour = r.hour != null ? parseInt(r.hour) : ts.hour;
+  return rHour === filter24;
+}
+
+function renderFeedbackTable() {
+  const sortCol = document.getElementById('sortColSelect').value;
+  const sortAsc = document.getElementById('sortDirSelect').value === 'asc';
+  const perPage = parseInt(document.getElementById('perPageSelect').value) || feedbackRows.length;
+
+  const isTimeSort = sortCol === 'timestamp';
+  let filtered = isTimeSort ? feedbackRows.filter(passesTimeFilter) : feedbackRows.slice();
+
+  const f = v => v == null ? '' : String(v);
+  filtered.sort((a, b) => {
+    const va = f(isTimeSort ? tsVal(a) : (a[sortCol] || ''));
+    const vb = f(isTimeSort ? tsVal(b) : (b[sortCol] || ''));
+    const cmp = va.localeCompare(vb, undefined, {numeric: true});
+    return sortAsc ? cmp : -cmp;
+  });
+
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  if (feedbackPage > totalPages) feedbackPage = totalPages;
+  if (feedbackPage < 1) feedbackPage = 1;
+  const start = (feedbackPage - 1) * perPage;
+  const pageRows = filtered.slice(start, start + perPage);
+
+  document.getElementById('logCount').textContent = total;
+  document.getElementById('logBody').innerHTML = pageRows.map(r => {
+    const ts = tsVal(r);
+    return '<tr><td>'+f(ts)+'</td><td>'+f(r.event_type)+'</td><td>'+f(r.event_cause)+'</td><td>'+f(r.corridor)+'</td><td>'+f(r.zone)+'</td><td>'+f(r.junction)+'</td><td>'+f(r.predicted_severity_label)+'</td><td><button onclick="deleteFeedbackRow(\''+ts.replace(/'/g,"\\'")+'\')" style="background:none;border:1px solid var(--red);color:var(--red);border-radius:3px;padding:2px 8px;font-size:11px;cursor:pointer;">✕</button></td></tr>'
+  }).join('');
+
+  document.getElementById('pageCurrent').textContent = feedbackPage;
+  document.getElementById('pageTotal').textContent = totalPages;
+  document.getElementById('pagePrev').style.visibility = totalPages <= 1 ? 'hidden' : 'visible';
+  document.getElementById('pageNext').style.visibility = totalPages <= 1 ? 'hidden' : 'visible';
+}
+
+async function deleteFeedbackRow(ts) {
+  if (!confirm('Delete this feedback row?')) return;
+  try {
+    const res = await fetch('/api/feedback/' + encodeURIComponent(ts), {method:'DELETE'});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const r = await res.json();
+    if (r.ok) { showToast('Row deleted'); loadFeedbackLog(); }
+    else showToast('Delete failed', true);
+  } catch(e) { showToast('Delete error', true); }
+}
+
+async function clearAllFeedback() {
+  if (!confirm('Delete ALL feedback rows? This cannot be undone.')) return;
+  try {
+    const res = await fetch('/api/feedback', {method:'DELETE'});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const r = await res.json();
+    if (r.ok) { showToast('All feedback cleared'); loadFeedbackLog(); }
+    else showToast('Clear failed', true);
+  } catch(e) { showToast('Clear error', true); }
+}
+
+async function loadFeedbackLog() {
+  try {
+    const res = await fetch('/api/feedback');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    feedbackRows = data.rows || [];
+    setFilterDefaults();
+    document.getElementById('timeFilterBar').style.display = 'flex';
+    renderFeedbackTable();
+  } catch(e) { /* silent */ }
+}
+
+// ============ TABS ============
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    const tab = t.dataset.tab;
+    document.getElementById('feedbackTab').style.display = tab === 'feedback' ? 'block' : 'none';
+    document.getElementById('retrainTab').style.display = tab === 'retrain' ? 'block' : 'none';
+    document.getElementById('liveTab').style.display = tab === 'live' ? 'block' : 'none';
+    if (tab === 'retrain') loadRetrainingData();
+    if (tab === 'live') renderLiveFeed();
+  });
+});
+
+// ============ RETRAINING DATASET ============
+async function loadRetrainingData() {
+  try {
+    const res = await fetch('/api/retraining');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    document.getElementById('retrainCount').textContent = data.total;
+    const rows = data.rows;
+    if (rows.length === 0) {
+      document.getElementById('retrainBody').innerHTML = '<tr><td>No retraining data available yet.</td></tr>';
+      return;
+    }
+    const headers = Object.keys(rows[0]);
+    const f = v => v == null ? '' : String(v).slice(0, 50);
+    document.getElementById('retrainHead').innerHTML = '<tr>' + headers.map(h => '<th>' + h + '</th>').join('') + '</tr>';
+    document.getElementById('retrainBody').innerHTML = rows.map(r =>
+      '<tr>' + headers.map(h => '<td>' + f(r[h]) + '</td>').join('') + '</tr>'
+    ).join('');
+  } catch(e) {
+    // silent
+  }
+}
+
+// ============ CSV EXPORT ============
+document.getElementById('downloadCsv').addEventListener('click', async ()=>{
+  try {
+    const res = await fetch('/api/feedback');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data.rows.length === 0) { showToast('No data to export', true); return; }
+    const headers = Object.keys(data.rows[0]);
+    let csv = headers.join(',') + '\n' + data.rows.map(r =>
+      headers.map(h => '"' + String(r[h] || '').replace(/"/g,'""') + '"').join(',')
+    ).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'astram_feedback_log.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    showToast('Export failed', true);
+  }
+});
+
+// ============ LIVE MONITOR ============
+let liveEvents = [];
+let liveEventSource = null;
+let liveEventId = 0;
+
+function renderLiveFeed() {
+  const feed = document.getElementById('liveFeed');
+  if (liveEvents.length === 0) {
+    feed.innerHTML = '<div class="empty-note">No live events yet. Click "Start live monitor" to begin.</div>';
+    return;
+  }
+  feed.innerHTML = liveEvents.map(e => {
+    const tag = e.severity_label === 'High' ? 'tag-high' : e.severity_label === 'Medium' ? 'tag-med' : 'tag-low';
+    const closure = e.road_closure ? '⚠ Closure' : '';
+    const time = e._time || '';
+    const src = (e.resources && e.resources.resource_source === 'model') ? '● DATA' : '● RULE';
+    const evSrc = e._source || '?';
+    return '<div class="event-card" style="border-left-color:' +
+      (e.severity_label === 'High' ? 'var(--red)' : e.severity_label === 'Medium' ? 'var(--amber)' : 'var(--green)') +
+      ';margin-bottom:6px;"><div class="ec-top"><span>#' + e.id + ' ' + time +
+      ' <span style="font-size:9px;color:var(--ink-faint);background:var(--paper);padding:1px 5px;border-radius:3px;">' + evSrc + '</span></span><span><span class="tag ' + tag + '">' + e.severity_label + '</span> ' +
+      (closure ? '<span class="tag tag-high">' + closure + '</span>' : '') +
+      ' <span style="font-size:10px;color:var(--ink-faint)">' + src + '</span></span></div>' +
+      '<div><strong>' + e.corridor + '</strong> · ' + e.event_cause.replace(/_/g,' ') +
+      ' · ' + (e.resources ? e.resources.officers_required + ' officers' : '') +
+      '</div></div>';
+  }).join('');
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function connectSSE() {
+  if (liveEventSource) liveEventSource.close();
+  liveEventSource = new EventSource('/api/realtime/stream');
+  liveEventSource.onmessage = function(ev) {
+    if (!ev.data || ev.data === ': keepalive') return;
+    try {
+      const e = JSON.parse(ev.data);
+      e._time = new Date().toLocaleTimeString('en-GB');
+      liveEvents.unshift(e);
+      if (liveEvents.length > 100) liveEvents.length = 100;
+      liveEventId = e.id || liveEventId;
+      document.getElementById('rtEventCount').textContent = liveEvents.length;
+      document.getElementById('simCount').textContent = liveEvents.length + ' events';
+      const recent = document.getElementById('recentEvents');
+      const card = '<div class="event-card"><div class="ec-top"><span>' + e._time + '</span><span>' + e.severity_label + '</span></div><div>' + e.corridor + ' · ' + e.event_cause.replace(/_/g,' ') + '</div></div>';
+      recent.innerHTML = card + (recent.children[0] && recent.children[0].classList.contains('empty-note') ? '' : Array.from(recent.children).slice(0, 5).map(c => c.outerHTML).join(''));
+      document.getElementById('recentTotal').textContent = liveEvents.length;
+      // Add live marker to map
+      if (map) {
+        const clr = e.severity_label === 'High' ? '#e23d3d' : e.severity_label === 'Medium' ? '#ff9f1c' : '#1fae6e';
+        L.circleMarker([e.latitude, e.longitude], {
+          radius: 8, color: clr, fillColor: clr, fillOpacity: 0.5, weight: 2, opacity: 0.7
+        }).bindTooltip(e.corridor + ' · ' + e.severity_label, {permanent: false}).addTo(map);
+      }
+      if (document.getElementById('liveTab').style.display !== 'none') renderLiveFeed();
+    } catch(e) { /* ignore parse errors */ }
+  };
+  liveEventSource.onerror = function() {
+    // auto-reconnect is built into EventSource
+  };
+}
+
+function disconnectSSE() {
+  if (liveEventSource) { liveEventSource.close(); liveEventSource = null; }
+}
+
+async function updateSourceStatus() {
+  try {
+    const res = await fetch('/api/realtime/config');
+    if (res.ok) {
+      const r = await res.json();
+      const st = document.getElementById('rtSourceStatus');
+      if (r.source_type === 'traffic_api' || r.source_type === 'tomtom') {
+        const name = r.source_type === 'tomtom' ? 'TomTom' : 'Bing Maps';
+        if (r.error) {
+          st.innerHTML = '⚠ ' + name + ' error: <strong>' + r.error + '</strong>';
+          st.style.color = 'var(--red)';
+          return false;
+        } else if (r.configured) {
+          st.textContent = '✓ ' + name + ' configured — waiting for incidents';
+          st.style.color = 'var(--green-deep)';
+          return true;
+        } else {
+          st.textContent = '⚠ ' + name + ' selected — paste an API key and click Save';
+          st.style.color = 'var(--amber-deep)';
+          return false;
+        }
+      } else {
+        st.textContent = '✓ Source: simulation';
+        st.style.color = 'var(--green-deep)';
+        return true;
+      }
+    }
+  } catch(e) { /* silent */ }
+  return false;
+}
+
+document.getElementById('rtStartBtn').addEventListener('click', async () => {
+  const ready = await updateSourceStatus();
+  if (!ready) { showToast('Check source config — see status below', true); return; }
+  try {
+    const res = await fetch('/api/realtime/start', {method:'POST'});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const r = await res.json();
+    if (r.ok) {
+      document.getElementById('rtStatus').innerHTML = '<span class="live-dot"></span>RUNNING';
+      document.getElementById('rtStatus').style.borderColor = 'rgba(31,174,110,0.4)';
+      connectSSE();
+      showToast('Live monitor started');
+    }
+  } catch(e) { showToast('Failed to start', true); }
+});
+
+document.getElementById('rtStopBtn').addEventListener('click', async () => {
+  try {
+    const res = await fetch('/api/realtime/stop', {method:'POST'});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const r = await res.json();
+    if (r.ok) {
+      document.getElementById('rtStatus').innerHTML = '<span style="opacity:0.5">●</span> STOPPED';
+      document.getElementById('rtStatus').style.borderColor = 'rgba(90,99,119,0.3)';
+      disconnectSSE();
+      updateSourceStatus();
+      showToast('Live monitor stopped');
+    }
+  } catch(e) { showToast('Failed to stop', true); }
+});
+
+document.getElementById('rtClearBtn').addEventListener('click', () => {
+  liveEvents = [];
+  document.getElementById('rtEventCount').textContent = '0';
+  document.getElementById('simCount').textContent = '0 events';
+  document.getElementById('recentEvents').innerHTML = '<div class="empty-note">No events yet — waiting for simulation source.</div>';
+  document.getElementById('recentTotal').textContent = '0';
+  document.getElementById('recentEvents').dataset.initialized = '';
+  renderLiveFeed();
+});
+
+// ============ SOURCE CONFIG ============
+document.getElementById('rtSourceType').addEventListener('change', () => {
+  const v = document.getElementById('rtSourceType').value;
+  const isApi = v === 'traffic_api' || v === 'tomtom';
+  document.getElementById('rtApiKeyRow').style.display = isApi ? 'flex' : 'none';
+  document.getElementById('rtApiKey').placeholder = v === 'tomtom' ? 'TomTom API key' : 'Bing Maps API key';
+});
+
+document.getElementById('rtSaveKey').addEventListener('click', async () => {
+  const sourceType = document.getElementById('rtSourceType').value;
+  const apiKey = document.getElementById('rtApiKey').value.trim();
+  try {
+    const res = await fetch('/api/realtime/config', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({source_type: sourceType, api_key: apiKey})
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const r = await res.json();
+    updateSourceStatus();
+    if (r.ok) {
+      showToast('Source config saved');
+    }
+  } catch(e) { showToast('Failed to save config', true); }
+});
+
+// Load current config on init
+(async function loadRtConfig() {
+  try {
+    const res = await fetch('/api/realtime/config');
+    if (res.ok) {
+      const r = await res.json();
+      document.getElementById('rtSourceType').value = r.source_type || 'simulation';
+      document.getElementById('rtApiKeyRow').style.display = r.source_type === 'traffic_api' || r.source_type === 'tomtom' ? 'flex' : 'none';
+      updateSourceStatus();
+    }
+  } catch(e) { /* silent */ }
+})();
+
+// Load latest events on page load and render into sidebar
+(async function loadLatestLiveEvents() {
+  try {
+    const res = await fetch('/api/realtime/latest');
+    if (res.ok) {
+      const data = await res.json();
+      const evts = data.events || [];
+      evts.reverse();
+      liveEvents = evts;
+      liveEvents.forEach(e => { e._time = new Date().toLocaleTimeString('en-GB'); });
+      if (evts.length > 0) {
+        document.getElementById('simCount').textContent = evts.length + ' events';
+        document.getElementById('recentTotal').textContent = evts.length;
+        const recent = document.getElementById('recentEvents');
+        recent.innerHTML = evts.slice(0, 6).map(e =>
+          '<div class="event-card"><div class="ec-top"><span>' + (e._time || '') + '</span><span>' + e.severity_label + '</span></div><div>' + e.corridor + ' · ' + (e.event_cause || '').replace(/_/g,' ') + '</div></div>'
+        ).join('');
+      }
+    }
+  } catch(e) { /* silent */ }
+})();
+
+// ============ INIT ============
+initMap(12.9716, 77.5946);
+loadCorridors();
+loadFeedbackLog();
+</script>
+</body>
+</html>
