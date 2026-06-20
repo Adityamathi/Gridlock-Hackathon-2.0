@@ -1,8 +1,6 @@
 # Project-specific
-outputs/models/
 outputs/event_feedback_log.csv
 outputs/retraining_dataset.csv
-app/.streamlit/secrets.toml
 create_pitch_deck.py
 server_test.log
 server_test_err.log
