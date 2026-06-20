@@ -3,7 +3,6 @@
 Real-Time Traffic Incident Response System for Bengaluru Traffic Police  
 **Theme:** Event-Driven Congestion (Planned & Unplanned)
 
-Built by **The ML Mavericks** — Eaknath M S (Lead), Ashish D, Sabarishh P, Prasanth Kanaga Sabai S
 
 ---
 
