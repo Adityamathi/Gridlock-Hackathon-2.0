@@ -1,22 +1,22 @@
-# ASTraM Event Congestion Command
+# Grid Unlock Command
 
 Real-Time Traffic Incident Response System for Bengaluru Traffic Police  
 **Theme:** Event-Driven Congestion (Planned & Unplanned)
-
 
 ---
 
 ## Overview
 
-A decision-support dashboard that predicts severity, road closures, event duration, and resource deployment (officers, barricades, patrols) for traffic congestion events in Bengaluru. Trained on 8,200+ historical ASTraM events across 22 corridors using 6 scikit-learn models.
+A decision-support dashboard that predicts severity, road closures, event duration, and resource deployment (officers, barricades, patrols) for traffic congestion events in Bengaluru. Trained on 7,500+ historical ASTraM events across **147 corridors** (21 named + 125 address-extracted non-corridor roads) using 6 scikit-learn models.
 
 ## Features
 
-- **Interactive Map** — 22 Bangalore corridors, severity zones, diversion routes
-- **ML Prediction Pipeline** — closure, duration, severity, resource optimization
-- **Real-Time Monitoring** — SSE-based live events (simulation or TomTom API)
-- **Feedback & Retraining** — edit ground truth, retrain models with one click
-- **Corridor Routing** — graph-based alternate route computation
+- **Interactive Map** — 147 Bangalore corridors with severity zones, diversion routes, and junction markers
+- **ML Prediction Pipeline** — closure (84.6%), duration (56.9%), severity (76.3%), and resource optimization
+- **Real-Time Monitoring** — SSE-based live events (simulation or TomTom Traffic API)
+- **Feedback & Retraining** — edit ground truth, retrain all models with one click
+- **Corridor Routing** — graph-based alternate route computation across 147-node network
+- **Two-Level Corridor Selector** — category (Corridor/Non-corridor) then road selector
 
 ## Quick Start
 
@@ -48,8 +48,8 @@ Open **http://localhost:5555** in your browser.
 
 | Feature | Steps |
 |---------|-------|
-| **Analyze an event** | Analysis tab → pick corridor → pick event cause → click Analyze |
-| **Feedback log** | Feedback Log tab → browse → edit ground truth → Save → Retrain Models |
+| **Analyze an event** | Analysis tab → select corridor category → pick road → pick event cause → click Analyze |
+| **Feedback log** | Feedback Log tab → browse/filter → edit ground truth → Save → Retrain Models |
 | **Live Monitor** | Live Monitor tab → set Simulation → Start |
 | **TomTom live traffic** | Live Monitor → TomTom Traffic API → enter key → Save → Start |
 
@@ -66,7 +66,7 @@ python src/train_resource_model.py
 - **Backend:** Flask, SSE
 - **ML:** scikit-learn, pandas, numpy, joblib
 - **Frontend:** Vanilla JS, Leaflet.js
-- **Data:** 8,200+ historical ASTraM events
+- **Data:** 7,500+ historical ASTraM events on 147 corridors
 
 ## License
 
