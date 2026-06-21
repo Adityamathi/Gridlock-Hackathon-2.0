@@ -45,7 +45,7 @@ def build_retraining_dataset():
         )
 
         truth_df["is_high_priority"] = (truth_df["priority"] == "High").astype(int)
-        truth_df["road_closure"] = truth_df["requires_road_closure"].astype(int)
+        truth_df["road_closure"] = pd.to_numeric(truth_df["requires_road_closure"], errors="coerce").fillna(0).astype(int)
         truth_df["id"] = -1
 
         # Keep only columns that match the base dataset

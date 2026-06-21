@@ -17,12 +17,14 @@ SRC_DIR = Path(__file__).resolve().parent / "src"
 sys.path.insert(0, str(SRC_DIR))
 
 from location_resolver import resolve_location_from_corridor, load_location_data, get_nearby_junctions
+from noncorridor_roads import NAMED_CORRIDORS
 from infer_event_profile import infer_event_profile
 from spatial_engine import estimate_spatial_impact
 from resource_optimizer import optimize_resources
 from routing_engine import suggest_diversion_routes
-from feedback_logger import log_prediction_event, update_ground_truth, delete_feedback_row, clear_all_feedback, LOG_FILE
+from feedback_logger import log_prediction_event, update_ground_truth, append_feedback_row, delete_feedback_row, clear_all_feedback, LOG_FILE
 from train_resource_model import train_and_save_resource_models
+from retrain_pipeline import build_retraining_dataset
 from realtime_generator import generate_raw_event
 from datetime import datetime, timedelta, timezone
 from realtime_ingest import TrafficEventSource
@@ -49,16 +51,23 @@ def get_corridors():
         df = load_location_data()
         corridors = df["corridor"].dropna().astype(str).str.strip()
         corridors = corridors[corridors != ""].unique().tolist()
-        result = {}
+        named = {}
+        noncorr = {}
         for c in sorted(corridors):
+            if c == "Non-corridor":
+                continue
             info = resolve_location_from_corridor(c)
-            result[c] = {
+            entry = {
                 "zone": info.get("zone", "Unknown"),
                 "junction": info.get("junction", "Unknown"),
                 "lat": info.get("latitude", 12.9716),
                 "lng": info.get("longitude", 77.5946),
             }
-        return jsonify(result)
+            if c in NAMED_CORRIDORS:
+                named[c] = entry
+            else:
+                noncorr[c] = entry
+        return jsonify({"named": named, "noncorridor": noncorr})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -79,7 +88,7 @@ def analyze():
             "day_of_week": data.get("day_of_week", 0),
             "month": data.get("month", 1),
             "is_weekend": 1 if data.get("day_of_week", 0) in [5, 6] else 0,
-            "expected_attendance": data.get("expected_attendance", 0),
+            "expected_attendance": data.get("expected_attendance") or data.get("attendance", 0),
         }
 
         inferred = infer_event_profile(sample)
@@ -102,6 +111,8 @@ def analyze():
         prediction = {
             "severity_label": inferred["severity_label"],
             "severity_score": inferred["severity_score"],
+            "duration_hours": inferred["duration_hours"],
+            "duration_bucket": inferred["duration_bucket"],
             "recommended_action": inferred["recommended_action"],
         }
         log_ts = log_prediction_event(sample, prediction, spatial, resources, routes)
@@ -148,8 +159,8 @@ def ground_truth():
         duration = float(data.get("actual_duration", 0))
         notes = data.get("notes", "")
 
-        if not ts or not severity:
-            return jsonify({"ok": False, "error": "Missing log_timestamp or actual_severity"}), 400
+        if not severity:
+            return jsonify({"ok": False, "error": "Missing actual_severity"}), 400
 
         bucket = "short"
         if duration >= 12:
@@ -161,9 +172,22 @@ def ground_truth():
         actual_barricades = data.get("actual_barricades")
         actual_patrols = data.get("actual_patrols")
 
-        ok = update_ground_truth(ts, severity, duration, bucket, notes,
-                                 actual_officers, actual_barricades, actual_patrols)
+        if ts:
+            ok = update_ground_truth(ts, severity, duration, bucket, notes,
+                                     actual_officers, actual_barricades, actual_patrols)
+        else:
+            ok = append_feedback_row(severity, duration, bucket, notes,
+                                     actual_officers, actual_barricades, actual_patrols)
         return jsonify({"ok": ok})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/retrain", methods=["POST"])
+def retrain():
+    try:
+        build_retraining_dataset()
+        return jsonify({"ok": True, "message": "Retraining dataset built"})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
@@ -218,8 +242,16 @@ def get_feedback():
 RETRAINING_FILE = OUTPUTS_DIR / "retraining_dataset.csv"
 
 
-@app.route("/api/retraining")
-def get_retraining():
+@app.route("/api/retraining", methods=["GET", "DELETE"])
+def handle_retraining():
+    if request.method == "DELETE":
+        try:
+            if RETRAINING_FILE.exists():
+                os.remove(RETRAINING_FILE)
+                return jsonify({"ok": True, "message": "Retraining dataset cleared"})
+            return jsonify({"ok": True, "message": "No retraining dataset to clear"})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
     try:
         if RETRAINING_FILE.exists():
             df = pd.read_csv(RETRAINING_FILE)

@@ -853,7 +853,7 @@ document.getElementById('downloadCsv').addEventListener('click', ()=>{
   const blob = new Blob([csv], {type:'text/csv'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'astram_feedback_log.csv';
+  a.href = url; a.download = 'grid_unlock_feedback_log.csv';
   a.click();
   URL.revokeObjectURL(url);
 });

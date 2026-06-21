@@ -4,6 +4,7 @@ outputs/retraining_dataset.csv
 create_pitch_deck.py
 server_test.log
 server_test_err.log
+Screenshot*.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
