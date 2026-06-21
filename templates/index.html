@@ -492,129 +492,27 @@ footer{padding:60px 0 32px;border-top:1px solid rgba(255,255,255,0.06)}
   <div class="container nav-inner">
     <a href="#" class="nav-logo">
       <div class="logo-icon">G</div>
-      <span>Grid Unlock <small>Command</small></span>
+      <span>Grid Unlock <small>Command Centre</small></span>
     </a>
-    <button class="nav-hamburger" id="hamburger" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
-    <ul class="nav-links" id="navLinks">
-      <li><a href="#features" class="active">Features</a></li>
-      <li><a href="#dashboard">Dashboard</a></li>
-    </ul>
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <span id="navClock" style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--sky); background: rgba(56,189,248,0.1); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(56,189,248,0.2);">--:--:--</span>
+      <span class="live-status" style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #10B981; background: rgba(16,185,129,0.1); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(16,185,129,0.2);">
+        <span class="dot" style="width: 8px; height: 8px; border-radius: 50%; background: #10B981; animation: pulse 2s infinite;"></span>
+        ML Core Active
+      </span>
+    </div>
   </div>
 </nav>
 
-<!-- ===== HERO ===== -->
-<section class="hero" id="hero">
-  <div class="hero-bg"></div>
-  <div class="float-shape"></div>
-  <div class="float-shape"></div>
-  <div class="float-shape"></div>
-  <div class="container">
-    <div class="hero-grid">
-      <div>
-        <div class="hero-badge"><span class="dot"></span> Live in Bengaluru Traffic Command</div>
-        <h1>
-          Predict. Prevent.<br>
-          <span class="highlight">Command Congestion.</span>
-        </h1>
-        <p>AI-powered event-driven congestion prediction for Bengaluru Traffic Police. Real-time analysis, resource optimisation, and intelligent diversion planning — all in one command dashboard.</p>
-        <div class="hero-actions">
-          <a href="#dashboard" class="btn btn-primary">Launch Dashboard</a>
-          <a href="#features" class="btn btn-secondary">Explore Features</a>
-        </div>
-        <div class="hero-stats">
-          <div class="hero-stat"><div class="num">7,500+</div><div class="label">Historical Events</div></div>
-          <div class="hero-stat"><div class="num">22</div><div class="label">Active Corridors</div></div>
-          <div class="hero-stat"><div class="num">6</div><div class="label">ML Models</div></div>
-        </div>
-      </div>
-      <div class="hero-visual">
-        <div class="hero-glow"></div>
-        <div class="hero-dash">
-          <div class="hero-dash-top">
-            <div class="dash-dots"><span></span><span></span><span></span></div>
-            <span class="dash-time" id="heroClock">--:--:--</span>
-          </div>
-          <div class="hero-dash-grid">
-            <div class="hero-dash-card"><div class="dc-label">Severity</div><div class="dc-value sky" id="heroSev">—</div></div>
-            <div class="hero-dash-card"><div class="dc-label">Priority</div><div class="dc-value" id="heroPri">—</div></div>
-            <div class="hero-dash-card"><div class="dc-label">Duration</div><div class="dc-value amber" id="heroDur">—</div></div>
-            <div class="hero-dash-card"><div class="dc-label">Confidence</div><div class="dc-value green" id="heroConf">—</div></div>
-          </div>
-          <div style="display:flex;gap:10px;font-size:12px;color:var(--slate);justify-content:center;padding:8px 0 0;border-top:1px solid rgba(255,255,255,0.05)">
-            <span>⚡ Real-time ML inference</span>
-            <span style="opacity:0.3">|</span>
-            <span>🔄 Auto-retraining</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== FEATURES ===== -->
-<section class="section" id="features">
-  <div class="container" style="text-align:center">
-    <div class="reveal"><span class="section-label">Platform Capabilities</span></div>
-    <div class="reveal reveal-delay-1"><h2 class="section-title" style="max-width:700px;margin:0 auto 20px">Intelligent command for every traffic event</h2></div>
-    <div class="reveal reveal-delay-2"><p class="section-sub" style="margin:0 auto">Six specialised ML models working in concert to predict severity, resource needs, and optimal response strategies.</p></div>
-  </div>
-  <div class="container features-grid">
-    <div class="feature-card reveal reveal-delay-1">
-      <div class="feature-icon">🔮</div>
-      <h3>Severity Prediction</h3>
-      <p>Accurately forecasts event severity (Low/Medium/High) using gradient-boosted classifiers trained on 7,500+ historical incidents.</p>
-    </div>
-    <div class="feature-card reveal reveal-delay-2">
-      <div class="feature-icon">⏱️</div>
-      <h3>Duration Estimation</h3>
-      <p>Predicts how long an event will last — short, medium, or extended — enabling precise resource scheduling and diversion planning.</p>
-    </div>
-    <div class="feature-card reveal reveal-delay-3">
-      <div class="feature-icon">🚔</div>
-      <h3>Resource Optimisation</h3>
-      <p>Determines exact officers, barricades, and patrol vehicles needed per event. No over-deployment, no under-response.</p>
-    </div>
-    <div class="feature-card reveal reveal-delay-1">
-      <div class="feature-icon">📡</div>
-      <h3>Real-Time Monitoring</h3>
-      <p>Live SSE stream with simulation, Bing Maps, and TomTom traffic API sources. Switch sources without restarting.</p>
-    </div>
-    <div class="feature-card reveal reveal-delay-2">
-      <div class="feature-icon">🔄</div>
-      <h3>Auto Retraining</h3>
-      <p>Feedback-driven continuous learning pipeline. Every ground-truth submission improves model accuracy over time.</p>
-    </div>
-    <div class="feature-card reveal reveal-delay-3">
-      <div class="feature-icon">🗺️</div>
-      <h3>Diversion Planning</h3>
-      <p>Intelligent alternate route suggestions with impact radius, deployment points, and zone-aware traffic management.</p>
-    </div>
-  </div>
-</section>
-
-<!-- ===== STATS ===== -->
-<section class="section stats-section">
-  <div class="container">
-    <div class="stats-grid">
-      <div class="stats-card reveal"><div class="num"><span class="counter" data-target="7532">0</span></div><div class="label">Events Analysed</div></div>
-      <div class="stats-card reveal reveal-delay-1"><div class="num"><span class="counter" data-target="22">0</span></div><div class="label">Active Corridors</div></div>
-      <div class="stats-card reveal reveal-delay-2"><div class="num">6</div><div class="label">ML Models Live</div></div>
-      <div class="stats-card reveal reveal-delay-3"><div class="num"><span class="counter" data-target="105">0</span>+</div><div class="label">Feedback Records</div></div>
-    </div>
-  </div>
-</section>
-
 <!-- ===== DASHBOARD SECTION ===== -->
 <section class="section preview-section" id="dashboard">
-  <div class="container" style="text-align:center">
-    <div class="reveal"><span class="section-label">Live Command Centre</span></div>
-    <div class="reveal reveal-delay-1"><h2 class="section-title" style="max-width:700px;margin:0 auto 20px">Your traffic command dashboard</h2></div>
-    <div class="reveal reveal-delay-2"><p class="section-sub" style="margin:0 auto 0">Analyse events, view predictions, submit ground truth feedback, and monitor real-time traffic — all from one interface.</p></div>
+  <div class="container" style="text-align:center; margin-bottom: 24px;">
+    <span class="section-label" style="margin-bottom: 8px;">Live Command Centre</span>
+    <h2 class="section-title" style="max-width:700px;margin:0 auto 12px; font-size: 36px;">Event-Driven Congestion Command</h2>
+    <p class="section-sub" style="margin:0 auto; font-size: 15px; max-width: 700px;">Analyse incidents, predict resource requirements, schedule deployments, track historical feedback, and stream live city traffic data.</p>
   </div>
 
-  <div class="container live-dash-panel reveal reveal-delay-1">
+  <div class="container live-dash-panel">
     <!-- Dashboard tabs -->
     <div class="dash-tabs">
       <button class="dash-tab active" data-tab="analysis">⊞ Analysis</button>
@@ -936,45 +834,8 @@ footer{padding:60px 0 32px;border-top:1px solid rgba(255,255,255,0.06)}
   </div>
 </section>
 
-<!-- ===== CTA ===== -->
-<section class="section cta-section">
-  <div class="container">
-    <div class="cta-box reveal">
-      <h2>Ready to command congestion?</h2>
-      <p>Join Bengaluru Traffic Police in using AI-powered prediction and real-time monitoring to keep the city moving.</p>
-      <div class="cta-actions">
-        <a href="#dashboard" class="btn btn-primary">Launch Dashboard</a>
-        <a href="#features" class="btn btn-secondary">Learn More</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== FOOTER ===== -->
-<footer>
-  <div class="container">
-    <div class="footer-grid">
-      <div class="footer-brand">
-        <div class="fl"><div class="logo-icon" style="display:inline-flex;width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--royal),var(--sky));align-items:center;justify-content:center;font-weight:800;font-size:16px">G</div> Grid Unlock</div>
-        <p>AI-powered event-driven congestion command for Bengaluru Traffic Police. Predict, prevent, and manage traffic events intelligently.</p>
-        <div class="footer-social">
-          <a href="#" aria-label="Twitter">𝕏</a>
-          <a href="#" aria-label="GitHub">GH</a>
-          <a href="#" aria-label="LinkedIn">in</a>
-          <a href="#" aria-label="YouTube">▶</a>
-        </div>
-      </div>
-      <div class="footer-col"><h4>Product</h4><a href="#features">Features</a><a href="#dashboard">Dashboard</a></div>
-      <div class="footer-col"><h4>Company</h4><a href="#">About</a><a href="#">Blog</a><a href="#">Careers</a><a href="#">Contact</a></div>
-      <div class="footer-col"><h4>Legal</h4><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Security</a>
-        <div class="footer-newsletter">
-          <input type="email" placeholder="Your email">
-          <button class="btn btn-primary btn-sm" style="padding:10px 16px;font-size:13px">Subscribe</button>
-        </div>
-      </div>
-    </div>
-    <div class="footer-bottom">© 2026 Grid Unlock — The ML Mavericks. All rights reserved. Built for Bengaluru Traffic Police.</div>
-  </div>
+<footer style="padding: 24px 0; text-align: center; font-size: 12px; color: var(--slate); border-top: 1px solid rgba(255,255,255,0.05); margin-top: 60px;">
+  © 2026 Grid Unlock — The ML Mavericks. All rights reserved. Built for Bengaluru Traffic Police.
 </footer>
 
 <div class="toast" id="toast"></div>
@@ -982,36 +843,9 @@ footer{padding:60px 0 32px;border-top:1px solid rgba(255,255,255,0.06)}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // ===== NAV =====
-const hamburger = document.getElementById('hamburger');
-const navLinks = document.getElementById('navLinks');
 const navbar = document.getElementById('navbar');
-
-hamburger.addEventListener('click', () => {
-  hamburger.classList.toggle('open');
-  navLinks.classList.toggle('open');
-});
-
-document.querySelectorAll('.nav-links a').forEach(a => {
-  a.addEventListener('click', () => {
-    hamburger.classList.remove('open');
-    navLinks.classList.remove('open');
-    document.querySelectorAll('.nav-links a').forEach(x => x.classList.remove('active'));
-    a.classList.add('active');
-  });
-});
-
 window.addEventListener('scroll', () => {
-  navbar.classList.toggle('scrolled', window.scrollY > 40);
-  // Update active nav link based on scroll
-  const sections = ['features','dashboard'];
-  let current = '';
-  sections.forEach(id => {
-    const el = document.getElementById(id);
-    if (el && window.scrollY >= el.offsetTop - 160) current = id;
-  });
-  document.querySelectorAll('.nav-links a:not(.btn)').forEach(a => {
-    a.classList.toggle('active', a.getAttribute('href') === '#' + current);
-  });
+  if (navbar) navbar.classList.toggle('scrolled', window.scrollY > 40);
 });
 
 // ===== SCROLL REVEAL =====
@@ -1026,7 +860,8 @@ document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 // ===== CLOCK =====
 function tickClock() {
   const now = new Date();
-  document.getElementById('heroClock').textContent = now.toLocaleTimeString('en-GB');
+  const navClock = document.getElementById('navClock');
+  if (navClock) navClock.textContent = now.toLocaleTimeString('en-GB');
 }
 tickClock(); setInterval(tickClock, 1000);
 
@@ -1301,10 +1136,14 @@ function displayOutput(r, d, corridor) {
   ul.innerHTML = reasons.map(function(rr) { return '<li>' + rr + '</li>'; }).join('');
 
   // Hero dash mock
-  document.getElementById('heroSev').textContent = r.severity_label || '—';
-  document.getElementById('heroPri').textContent = r.priority || '—';
-  document.getElementById('heroDur').textContent = r.duration_hours ? r.duration_hours.toFixed(1) + 'h' : '—';
-  document.getElementById('heroConf').textContent = r.severity_score != null ? r.severity_score + '%' : '—';
+  const hSev = document.getElementById('heroSev');
+  if (hSev) hSev.textContent = r.severity_label || '—';
+  const hPri = document.getElementById('heroPri');
+  if (hPri) hPri.textContent = r.priority || '—';
+  const hDur = document.getElementById('heroDur');
+  if (hDur) hDur.textContent = r.duration_hours ? r.duration_hours.toFixed(1) + 'h' : '—';
+  const hConf = document.getElementById('heroConf');
+  if (hConf) hConf.textContent = r.severity_score != null ? r.severity_score + '%' : '—';
 
   // ===== MAP =====
   var lat = d.lat, lng = d.lng;
