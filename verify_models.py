@@ -1,10 +1,18 @@
 from pathlib import Path
 import joblib
 
-MODELS_DIR = Path('outputs/models')
+PROJECT_ROOT = Path(__file__).resolve().parent
+MODELS_DIR = PROJECT_ROOT / "outputs" / "models"
 
-# Check all 3 models exist
-models = ['severity_model.joblib', 'closure_model.joblib', 'duration_model.joblib']
+# Check all models exist (3 main + 3 resource)
+models = [
+    'severity_model.joblib',
+    'closure_model.joblib',
+    'duration_model.joblib',
+    'officers_model.joblib',
+    'barricades_model.joblib',
+    'patrols_model.joblib',
+]
 
 all_ok = True
 for model_name in models:
@@ -17,6 +25,6 @@ for model_name in models:
         all_ok = False
 
 if all_ok:
-    print('\n✓✓✓ Step 4 PASSED - All models load correctly!')
+    print(f'\n✓✓✓ All {len(models)} models load correctly!')
 else:
-    print('\n✗✗✗ Step 4 FAILED - Some models missing')
+    print(f'\n✗✗✗ Some models missing')

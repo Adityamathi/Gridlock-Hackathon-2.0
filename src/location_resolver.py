@@ -18,6 +18,9 @@ def load_location_data():
     with _cache_lock:
         if _cache is not None:
             return _cache
+        if not DATA_FILE.exists():
+            _cache = pd.DataFrame(columns=["corridor", "zone", "junction", "latitude", "longitude"])
+            return _cache
         df = pd.read_csv(DATA_FILE)
 
         needed = ["corridor", "zone", "junction", "latitude", "longitude"]

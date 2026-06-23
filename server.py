@@ -4,11 +4,14 @@ import json
 import queue
 import math
 import time
+import warnings
 import webbrowser
 import threading
 import urllib.parse
 from pathlib import Path
 from collections import deque
+
+warnings.filterwarnings("ignore", message="Trying to unpickle estimator", category=UserWarning)
 
 import pandas as pd
 from flask import Flask, jsonify, request, render_template, Response, stream_with_context
@@ -33,6 +36,7 @@ from realtime_ingest import TrafficEventSource
 REALTIME_API_KEY = ""
 REALTIME_API_URL = ""  # optional override if not Bing Maps
 TOMTOM_BBOX = "77.50,12.87,77.72,13.10"  # Bangalore minLon,minLat,maxLon,maxLat
+PORT = int(os.environ.get("PORT", 5555))
 
 app = Flask(__name__)
 
@@ -103,10 +107,14 @@ def analyze():
         routes = suggest_diversion_routes(
             sample["event_cause"], inferred["severity_label"],
             sample["latitude"], sample["longitude"],
-            corridor=sample["corridor"]
+            corridor=sample["corridor"],
+            spatial=spatial
         )
 
         nearby_junctions = get_nearby_junctions(sample["corridor"])
+
+        sample["priority"] = inferred["priority"]
+        sample["requires_road_closure"] = inferred["requires_road_closure"]
 
         prediction = {
             "severity_label": inferred["severity_label"],
@@ -138,6 +146,7 @@ def analyze():
                 "deployment_points": resources["deployment_points"],
                 "attendance_label": resources.get("attendance_label", "unknown"),
                 "escalation_note": resources.get("escalation_note", ""),
+                "expected_attendance": resources.get("expected_attendance", 0),
                 "resource_source": resources.get("resource_source", "rule"),
             },
             "routes": {
@@ -223,7 +232,7 @@ def clear_feedback():
 
 def _clean_nan(val):
     import math
-    if isinstance(val, float) and math.isnan(val):
+    if val is None or (isinstance(val, float) and math.isnan(val)) or val == "nan":
         return None
     return val
 
@@ -231,7 +240,7 @@ def _clean_nan(val):
 def get_feedback():
     try:
         if LOG_FILE.exists():
-            df = pd.read_csv(LOG_FILE)
+            df = pd.read_csv(LOG_FILE, dtype=str)
             rows = [{k: _clean_nan(v) for k, v in row.items()} for row in df.to_dict(orient="records")]
             return jsonify({"rows": rows, "total": len(df)})
         return jsonify({"rows": [], "total": 0})
@@ -305,11 +314,17 @@ def _process_event(sample):
     routes = suggest_diversion_routes(
         sample["event_cause"], inferred["severity_label"],
         sample["latitude"], sample["longitude"],
-        corridor=sample["corridor"]
+        corridor=sample["corridor"],
+        spatial=spatial
     )
+    sample["priority"] = inferred["priority"]
+    sample["requires_road_closure"] = inferred["requires_road_closure"]
+
     prediction = {
         "severity_label": inferred["severity_label"],
         "severity_score": inferred["severity_score"],
+        "duration_hours": inferred["duration_hours"],
+        "duration_bucket": inferred["duration_bucket"],
         "recommended_action": inferred["recommended_action"],
     }
     log_ts = log_prediction_event(sample, prediction, spatial, resources, routes)
@@ -341,6 +356,9 @@ def _process_event(sample):
             "monitoring_level": resources["monitoring_level"],
             "impact_radius_km": resources.get("impact_radius_km", spatial.get("estimated_impact_radius_km", 1.0)),
             "deployment_points": resources["deployment_points"],
+            "attendance_label": resources.get("attendance_label", "unknown"),
+            "escalation_note": resources.get("escalation_note", ""),
+            "expected_attendance": resources.get("expected_attendance", 0),
             "resource_source": resources.get("resource_source", "rule"),
         },
         "routes": {
@@ -372,7 +390,8 @@ def _realtime_worker():
                 _latest_events.append(payload)
                 _realtime_broadcast(payload)
         except Exception as e:
-            pass
+            import traceback
+            traceback.print_exc()
         time.sleep(5 if _realtime_source in ("traffic_api", "tomtom") else _realtime_interval)
 
 @app.route("/api/realtime/stream")
@@ -380,6 +399,30 @@ def realtime_stream():
     q = queue.Queue(maxsize=100)
     with _realtime_lock:
         _realtime_clients.append(q)
+
+    source = request.args.get("source", "")
+    api_key = request.args.get("api_key", "")
+
+    global _realtime_running, _realtime_source, _traffic_source
+    if source in ("traffic_api", "tomtom") and api_key:
+        if not _realtime_running:
+            _realtime_source = source
+            url = REALTIME_API_URL or ""
+            if source == "tomtom":
+                url = (f"https://api.tomtom.com/traffic/services/5/incidentDetails"
+                       f"?key={api_key}&bbox={TOMTOM_BBOX}&fields=incidentsOnly&language=en-GB")
+            with _traffic_source_lock:
+                _traffic_source = TrafficEventSource(api_key=api_key, api_url=url, poll_interval=30)
+                _traffic_source._last_poll = datetime.now(timezone.utc) - timedelta(seconds=31)
+            _realtime_running = True
+            t = threading.Thread(target=_realtime_worker, daemon=True)
+            t.start()
+    elif source == "simulation" and not _realtime_running:
+        _realtime_source = "simulation"
+        _realtime_running = True
+        t = threading.Thread(target=_realtime_worker, daemon=True)
+        t.start()
+
     def generate():
         try:
             while True:
@@ -394,7 +437,7 @@ def realtime_stream():
                     _realtime_clients.remove(q)
     return Response(stream_with_context(generate()),
                     mimetype="text/event-stream",
-                    headers={"Cache-Control": "no-cache", "Connection": "keep-alive"})
+                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 @app.route("/api/realtime/start", methods=["POST"])
 def realtime_start():
@@ -465,7 +508,39 @@ def realtime_config():
     })
 
 
+@app.route("/api/traffic-key", methods=["POST"])
+def traffic_key():
+    global REALTIME_API_KEY, _realtime_source, _traffic_source
+    data = request.get_json() or {}
+    key = data.get("api_key", "").strip()
+    if not key:
+        return jsonify({"ok": False, "message": "No API key provided"}), 400
+    REALTIME_API_KEY = key
+    source = data.get("source_type", "traffic_api")
+    with _traffic_source_lock:
+        url = REALTIME_API_URL or ""
+        if source == "tomtom":
+            url = (f"https://api.tomtom.com/traffic/services/5/incidentDetails"
+                   f"?key={key}&bbox={TOMTOM_BBOX}&fields=incidentsOnly&language=en-GB")
+        _traffic_source = TrafficEventSource(api_key=key, api_url=url, poll_interval=30)
+        _traffic_source._last_poll = datetime.now(timezone.utc) - timedelta(seconds=31)
+    _realtime_source = source
+    return jsonify({"ok": True, "message": f"API key saved for {source}"})
+
+
+@app.route("/api/feedback/csv")
+def feedback_csv():
+    path = LOG_FILE
+    if path.exists():
+        return Response(
+            path.read_text(encoding="utf-8"),
+            mimetype="text/csv",
+            headers={"Content-Disposition": "attachment; filename=event_feedback_log.csv"}
+        )
+    return Response("", mimetype="text/csv", status=204)
+
+
 if __name__ == "__main__":
     if not os.environ.get("WERKZEUG_RUN_MAIN"):
-        threading.Timer(1.5, lambda: webbrowser.open("http://127.0.0.1:5555")).start()
-    app.run(debug=False, threaded=True, port=5555)
+        threading.Timer(1.5, lambda: webbrowser.open(f"http://127.0.0.1:{PORT}")).start()
+    app.run(debug=False, threaded=True, port=PORT)

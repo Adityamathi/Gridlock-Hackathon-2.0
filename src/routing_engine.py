@@ -28,9 +28,10 @@ CAUSE_STRATEGIES = {
 }
 
 
-def suggest_diversion_routes(event_cause, severity_label, latitude, longitude, corridor="Non-corridor"):
+def suggest_diversion_routes(event_cause, severity_label, latitude, longitude, corridor="Non-corridor", spatial=None):
     # Get spatial context (nearby corridors and junctions)
-    spatial = estimate_spatial_impact(latitude, longitude)
+    if spatial is None:
+        spatial = estimate_spatial_impact(latitude, longitude)
     top_corridors = spatial.get("top_corridors", [corridor])
     top_junctions = spatial.get("top_junctions", [])
     radius = spatial.get("estimated_impact_radius_km", 1.0)

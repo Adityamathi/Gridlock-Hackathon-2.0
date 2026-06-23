@@ -8,6 +8,7 @@ from config import OUTPUT_DIR
 from corridor_network import CORRIDOR_GRAPH
 
 DATA_FILE = OUTPUT_DIR / "processed_theme3.csv"
+_spatial_data_cache = None
 
 CORRIDOR_CENTROIDS = {
     '100 Feet Road, Kanteerava Studio Circle': (13.021037, 77.528271),
@@ -179,8 +180,12 @@ def nearest_corridor(lat, lon):
     return best, round(best_dist, 3)
 
 def load_spatial_data():
+    global _spatial_data_cache
+    if _spatial_data_cache is not None:
+        return _spatial_data_cache
     df = pd.read_csv(DATA_FILE)
     df = df.dropna(subset=["latitude", "longitude"])
+    _spatial_data_cache = df
     return df
 
 def estimate_spatial_impact(lat, lon):
@@ -204,8 +209,9 @@ def estimate_spatial_impact(lat, lon):
     impact_radius = min(3.0, max(0.5, nearby["_dist"].quantile(0.85)))
     top_corridor_rows = nearby.groupby("corridor").size().sort_values(ascending=False)
     nearest_name = top_corridor_rows.index[0] if not top_corridor_rows.empty else "Non-corridor"
-    nearby["_hav"] = distances
-    nearest_row = nearby.loc[nearby["_hav"].idxmin()]
+    top_corridors = top_corridor_rows.index[:3].tolist() if not top_corridor_rows.empty else []
+    top_junction_rows = nearby.groupby("junction").size().sort_values(ascending=False)
+    top_junctions = top_junction_rows.index[:3].tolist() if not top_junction_rows.empty else []
     _, dist_to_nearest = nearest_corridor(lat, lon)
     return {
         "estimated_impact_radius_km": round(impact_radius, 2),
@@ -213,6 +219,8 @@ def estimate_spatial_impact(lat, lon):
         "avg_nearby_duration_hours": round(float(avg_dur), 2) if pd.notna(avg_dur) else None,
         "nearest_corridor": nearest_name,
         "distance_to_nearest_km": dist_to_nearest,
+        "top_corridors": top_corridors,
+        "top_junctions": top_junctions,
     }
 
 if __name__ == "__main__":

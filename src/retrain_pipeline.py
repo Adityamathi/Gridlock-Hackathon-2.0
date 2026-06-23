@@ -14,10 +14,10 @@ def build_retraining_dataset():
         print(f"Saved: {MERGED_FILE}")
         return
 
-    feedback_df = pd.read_csv(FEEDBACK_FILE)
+    feedback_df = pd.read_csv(FEEDBACK_FILE, dtype=str)
 
     # Split feedback into rows WITH ground truth and WITHOUT
-    has_truth = feedback_df["actual_severity_label"].notna() & (feedback_df["actual_severity_label"] != "")
+    has_truth = ~feedback_df["actual_severity_label"].isin(["", "nan"])
     truth_df = feedback_df[has_truth].copy()
     pending_df = feedback_df[~has_truth].copy()
 
@@ -32,15 +32,15 @@ def build_retraining_dataset():
 
         # Use actual values where available, fall back to predictions
         truth_df["severity_label"] = truth_df.apply(
-            lambda r: r["actual_severity_label"] if pd.notna(r.get("actual_severity_label")) and r.get("actual_severity_label") != "" else r["severity_label"],
+            lambda r: r["actual_severity_label"] if r.get("actual_severity_label", "") not in ("", "nan") else r["severity_label"],
             axis=1
         )
         truth_df["duration_hours"] = truth_df.apply(
-            lambda r: float(str(r["actual_duration_hours"])) if pd.notna(r.get("actual_duration_hours")) and str(r.get("actual_duration_hours")).strip() != "" else 1.0,
+            lambda r: float(str(r["actual_duration_hours"]).strip()) if r.get("actual_duration_hours", "") not in ("", "nan") else 1.0,
             axis=1
         )
         truth_df["duration_bucket"] = truth_df.apply(
-            lambda r: r["actual_duration_bucket"] if pd.notna(r.get("actual_duration_bucket")) and r.get("actual_duration_bucket") != "" else "medium",
+            lambda r: r["actual_duration_bucket"] if r.get("actual_duration_bucket", "") not in ("", "nan") else "medium",
             axis=1
         )
 

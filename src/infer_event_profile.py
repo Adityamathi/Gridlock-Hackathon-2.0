@@ -1,6 +1,7 @@
 import os
 import sys
 import math
+import warnings
 import joblib
 import pandas as pd
 import numpy as np
@@ -85,9 +86,15 @@ ACTIONS = {
 }
 
 
+_model_cache = {}
+
 def _load_model(model_name):
-    model_path = MODELS_DIR / f"{model_name}.joblib"
-    return joblib.load(model_path)
+    if model_name not in _model_cache:
+        model_path = MODELS_DIR / f"{model_name}.joblib"
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            _model_cache[model_name] = joblib.load(model_path)
+    return _model_cache[model_name]
 
 
 def assign_priority_rule(corridor):

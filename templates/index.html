@@ -670,6 +670,7 @@ footer{padding:60px 0 32px;border-top:1px solid rgba(255,255,255,0.06)}
               </div>
             </div>
             <div style="margin-top:10px;font-size:12px;color:var(--gray);background:rgba(255,255,255,0.02);border-radius:6px;padding:10px;line-height:1.5" id="deployment-points"></div>
+            <div style="margin-top:8px;font-size:11px;color:var(--amber);font-style:italic;display:none" id="resource-caution"></div>
           </div>
 
           <!-- On map -->
@@ -751,6 +752,7 @@ footer{padding:60px 0 32px;border-top:1px solid rgba(255,255,255,0.06)}
         <select id="sortDirSelect">
           <option value="desc" selected>Newest</option><option value="asc">Oldest</option>
         </select>
+        <button class="btn btn-sm" id="clearSortBtn" style="padding:4px 10px;font-size:11px">Clear Sort</button>
         <select id="perPageSelect">
           <option value="10">10/page</option><option value="25">25/page</option><option value="50">50/page</option><option value="100">100/page</option>
         </select>
@@ -901,6 +903,7 @@ document.querySelectorAll('.dash-tab').forEach(tab => {
     document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
     if (tab.dataset.tab === 'live') renderLiveFeed();
     if (tab.dataset.tab === 'retrain') loadRetrainingData();
+    if (tab.dataset.tab === 'feedback') loadFeedbackLog();
   });
 });
 
@@ -913,6 +916,7 @@ let _rtEventCount = 0;
 
 // ============ LOAD CORRIDORS ============
 async function loadCorridors() {
+  if (Object.keys(corridorData).length) return;
   try {
     const res = await fetch('/api/corridors');
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -954,7 +958,8 @@ document.getElementById('eventLogSelector').addEventListener('change', function(
 });
 
 // ============ ANALYSIS ============
-document.getElementById('loadDemoBtn').addEventListener('click', () => {
+document.getElementById('loadDemoBtn').addEventListener('click', async () => {
+  await loadCorridors();
   document.getElementById('corridorCategory').value = 'Corridor';
   populateRoads();
   document.getElementById('corridorSelect').value = 'Mysore Road';
@@ -973,27 +978,30 @@ document.getElementById('runAnalysisBtn').addEventListener('click', runAnalysis)
 let _analysisLogs = [];
 
 async function runAnalysis() {
+  const btn = document.getElementById('runAnalysisBtn');
   const errEl = document.getElementById('analysisError');
+  btn.disabled = true; btn.textContent = 'Analysing…';
   errEl.style.display = 'none';
-  const corridor = document.getElementById('corridorSelect').value;
-  const cat = document.getElementById('corridorCategory').value;
-  const dict = cat === 'Corridor' ? corridorData.named : corridorData.noncorridor;
-  const d = dict[corridor];
-  if (!d) { showToast('Please select a corridor', true); return; }
-  let hour = parseInt(document.getElementById('hourInput').value) || 6;
-  const ampm = document.getElementById('hourAmPm').value;
-  if (ampm === 'PM' && hour < 12) hour += 12;
-  if (ampm === 'AM' && hour === 12) hour = 0;
-  const payload = {
-    corridor, zone: d.zone, junction: d.junction,
-    latitude: d.lat, longitude: d.lng,
-    event_type: document.getElementById('eventType').value,
-    event_cause: document.getElementById('eventCause').value,
-    hour, month: parseInt(document.getElementById('monthSelect').value) || 12,
-    day_of_week: parseInt(document.getElementById('daySelect').value) || 5,
-    attendance: parseInt(document.getElementById('attendance').value) || 0
-  };
   try {
+    const corridor = document.getElementById('corridorSelect').value;
+    const cat = document.getElementById('corridorCategory').value;
+    const dict = cat === 'Corridor' ? corridorData.named : corridorData.noncorridor;
+    const d = dict[corridor];
+    if (!d) { showToast('Please select a corridor', true); return; }
+    let hour = parseInt(document.getElementById('hourInput').value);
+    if (isNaN(hour)) hour = 6;
+    const ampm = document.getElementById('hourAmPm').value;
+    if (ampm === 'PM' && hour < 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    const payload = {
+      corridor, zone: d.zone, junction: d.junction,
+      latitude: d.lat, longitude: d.lng,
+      event_type: document.getElementById('eventType').value,
+      event_cause: document.getElementById('eventCause').value,
+      hour, month: parseInt(document.getElementById('monthSelect').value) || 12,
+      day_of_week: parseInt(document.getElementById('daySelect').value) || 5,
+      attendance: parseInt(document.getElementById('attendance').value) || 0
+    };
     const res = await fetch('/api/analyze', {
       method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
     });
@@ -1012,6 +1020,7 @@ async function runAnalysis() {
     // Store in analysis logs for ground truth
     const logEntry = {
       id: Date.now(), timestamp: new Date().toISOString(),
+      log_timestamp: r.log_timestamp,
       corridor, event_type: payload.event_type, event_cause: payload.event_cause,
       hour: payload.hour, severity_label: r.severity_label, priority: r.priority,
       duration_hours: r.duration_hours,
@@ -1024,9 +1033,12 @@ async function runAnalysis() {
     _analysisLogs.unshift(logEntry);
     if (_analysisLogs.length > 50) _analysisLogs.length = 50;
     populateEventLogSelector();
+    loadFeedbackLog();
   } catch(e) {
     errEl.textContent = 'Analysis failed: ' + e.message;
     errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Run Analysis';
   }
 }
 
@@ -1035,7 +1047,7 @@ function displayOutput(r, d, corridor) {
   const set = (id, v) => document.getElementById(id).textContent = v;
   const res = r.resources || {};
   const routes = r.routes || {};
-  const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   const MONTHS = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
 
   // Location context
@@ -1072,6 +1084,11 @@ function displayOutput(r, d, corridor) {
   set('r-radius', res.impact_radius_km != null ? res.impact_radius_km.toFixed(2) : '—');
   set('resource-source', '● ' + (res.resource_source || 'rule').toUpperCase());
   set('recAction', r.recommended_action || 'No recommendation available.');
+
+  // Caution — minimum numbers
+  var caution = document.getElementById('resource-caution');
+  caution.textContent = 'Numbers shown are minimum requirements — actual needs may vary in real-time conditions.';
+  caution.style.display = 'block';
 
   // Deployment points
   var pts = res.deployment_points || [];
@@ -1210,7 +1227,7 @@ function setupStepper(inputId, minusId, plusId, min, max) {
   document.getElementById(minusId).addEventListener('click', () => { let v = parseInt(inp.value) - 1; if (v >= min) inp.value = v; });
   document.getElementById(plusId).addEventListener('click', () => { let v = parseInt(inp.value) + 1; if (v <= max) inp.value = v; });
 }
-setupStepper('hourInput', 'hourMinus', 'hourPlus', 1, 12);
+setupStepper('hourInput', 'hourMinus', 'hourPlus', 0, 12);
 setupStepper('attendance', 'attMinus', 'attPlus', 0, 10000);
 
 // ============ GROUND TRUTH ============
@@ -1227,8 +1244,14 @@ document.getElementById('submitGroundTruth').addEventListener('click', async () 
   const gtMsg = document.getElementById('gtMessage');
   const severity = document.getElementById('actualSeverity').value;
   if (!severity) { gtMsg.textContent = 'Please select severity'; gtMsg.style.color = '#EF4444'; return; }
+  const selIdx = document.getElementById('eventLogSelector').value;
+  let logTs = '';
+  if (selIdx) {
+    const entry = _analysisLogs[parseInt(selIdx)];
+    if (entry) logTs = entry.log_timestamp || '';
+  }
   const payload = {
-    log_timestamp: '',
+    log_timestamp: logTs,
     actual_severity: severity,
     actual_duration: parseFloat(document.getElementById('actualDuration').value) || 0,
     actual_officers: parseInt(document.getElementById('actualOfficers').value) || null,
@@ -1244,6 +1267,12 @@ document.getElementById('submitGroundTruth').addEventListener('click', async () 
     if (r.ok) {
       gtMsg.textContent = '✓ Ground truth recorded. Thank you!';
       gtMsg.style.color = '#10B981';
+      document.getElementById('actualSeverity').value = '';
+      document.getElementById('actualDuration').value = '0';
+      document.getElementById('actualOfficers').value = '';
+      document.getElementById('actualBarricades').value = '';
+      document.getElementById('actualPatrols').value = '';
+      document.getElementById('eventLogSelector').value = '';
       document.getElementById('groundNotes').value = '';
       loadFeedbackLog();
     } else { gtMsg.textContent = r.error || 'Submission failed'; gtMsg.style.color = '#EF4444'; }
@@ -1272,7 +1301,7 @@ function applyLogFilters() {
     }
     if (hourFrom !== '' && dt.getHours() < parseInt(hourFrom)) return false;
     if (hourTo !== '' && dt.getHours() > parseInt(hourTo)) return false;
-    if (dayFilter !== '' && dt.getDay() !== parseInt(dayFilter)) return false;
+    if (dayFilter !== '' && r.day_of_week != null && r.day_of_week !== parseInt(dayFilter)) return false;
     if (yearFilter !== '' && dt.getFullYear() !== parseInt(yearFilter)) return false;
     return true;
   });
@@ -1328,7 +1357,7 @@ async function loadFeedbackLog() {
     populateLogYearFilter();
     _page = 1;
     renderLog();
-  } catch(e) { showToast('Failed to load feedback', true); }
+  } catch(e) { console.error('loadFeedbackLog error:', e.message, e.stack); showToast('Failed to load feedback: ' + e.message, true); }
 }
 
 function renderLog() {
@@ -1376,6 +1405,20 @@ function renderLog() {
 
 document.getElementById('sortColSelect').addEventListener('change', renderLog);
 document.getElementById('sortDirSelect').addEventListener('change', renderLog);
+document.getElementById('clearSortBtn').addEventListener('click', () => {
+  document.getElementById('sortColSelect').value = 'default';
+  document.getElementById('sortDirSelect').value = 'desc';
+  document.getElementById('logFilterDateFrom').value = '';
+  document.getElementById('logFilterDateTo').value = '';
+  document.getElementById('logFilterHourFrom').value = '';
+  document.getElementById('logFilterHourTo').value = '';
+  document.getElementById('logFilterDay').value = '';
+  document.getElementById('logFilterYear').value = '';
+  document.getElementById('perPageSelect').value = '10';
+  _perPage = 10;
+  _page = 1;
+  renderLog();
+});
 ['logFilterHourFrom','logFilterHourTo','logFilterDay','logFilterYear'].forEach(id => {
   document.getElementById(id).addEventListener('change', () => { _page = 1; renderLog(); });
 });
@@ -1385,7 +1428,7 @@ document.getElementById('perPageSelect').addEventListener('change', function() {
 });
 document.getElementById('pagePrev').addEventListener('click', () => { if (_page > 1) { _page--; renderLog(); } });
 document.getElementById('pageNext').addEventListener('click', () => {
-  const tp = Math.ceil(_logData.length / _perPage) || 1;
+  const tp = Math.ceil(applyLogFilters().length / _perPage) || 1;
   if (_page < tp) { _page++; renderLog(); }
 });
 document.getElementById('downloadCsv').addEventListener('click', () => {
@@ -1401,7 +1444,9 @@ document.getElementById('clearAllBtn').addEventListener('click', async () => {
   } catch(e) { showToast('Clear error', true); }
 });
 document.getElementById('retrainResourceBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('retrainResourceBtn');
   const st = document.getElementById('retrainStatus');
+  btn.disabled = true; btn.textContent = '⟳ Retraining…';
   st.textContent = 'Building retraining dataset…';
   try {
     await fetch('/api/retrain', {method:'POST'});
@@ -1413,6 +1458,7 @@ document.getElementById('retrainResourceBtn').addEventListener('click', async ()
     st.textContent = r.ok ? 'Retraining complete' : 'Retraining failed';
     loadRetrainingData();
   } catch(e) { st.textContent = 'Retraining failed'; }
+  btn.disabled = false; btn.textContent = '⟳ Retrain Models';
 });
 loadFeedbackLog();
 
@@ -1502,6 +1548,7 @@ function startLiveMonitor() {
 function stopLiveMonitor() {
   _rtRunning = false;
   if (liveEventSource) { liveEventSource.close(); liveEventSource = null; }
+  fetch('/api/realtime/stop', {method:'POST'});
   const st = document.getElementById('rtStatus');
   st.innerHTML = '<span class="dot"></span>STOPPED';
   st.style.borderColor = 'rgba(255,255,255,0.1)';
@@ -1549,6 +1596,7 @@ async function loadRecentAnalysisLogs() {
       _analysisLogs.push({
         id: t.getTime(),
         timestamp: ts,
+        log_timestamp: row.log_timestamp || ts,
         corridor: row.corridor || '',
         event_type: row.event_type || '',
         event_cause: row.event_cause || '',

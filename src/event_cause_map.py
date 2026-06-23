@@ -6,8 +6,9 @@ Why: The raw data has inconsistent naming (vehicle_breakdown vs vehiclebreakdown
 pot_holes vs potholes, water_logging vs waterlogging, mixed case, debris vs Debris).
 This module provides a single source of truth for the mapping.
 """
-
 import re
+import pandas as pd
+
 
 # Map every observed raw cause to a standardized key
 _RAW_TO_STANDARD = {
@@ -88,5 +89,4 @@ def cause_group(standard_cause):
     return CAUSE_GROUP.get(standard_cause, "others")
 
 
-# Lazy import to allow module-level definition
-import pandas as pd  # noqa: E402
+
